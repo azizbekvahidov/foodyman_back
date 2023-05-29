@@ -4,7 +4,6 @@ namespace App\Http\Controllers\API\v1\Dashboard\Admin;
 
 use App\Helpers\ResponseError;
 use App\Http\Requests\ShopDeliverymanSetting\AdminStoreRequest;
-use App\Http\Requests\ShopDeliverymanSetting\StoreRequest;
 use App\Http\Requests\FilterParamsRequest;
 use App\Http\Resources\ShopDeliverymanSettingResource;
 use App\Models\ShopDeliverymanSetting;
@@ -111,6 +110,42 @@ class ShopDeliverymanSettingController extends AdminBaseController
                 'message'   => __('errors.' . ResponseError::ERROR_404, locale: $this->language)
             ]);
         }
+
+        return $this->successResponse(
+            __('errors.' . ResponseError::RECORD_WAS_SUCCESSFULLY_DELETED, locale: $this->language)
+        );
+    }
+
+    /**
+     * @return JsonResponse
+     */
+    public function dropAll(): JsonResponse
+    {
+        $this->service->dropAll();
+
+        return $this->successResponse(
+            __('errors.' . ResponseError::RECORD_WAS_SUCCESSFULLY_UPDATED, locale: $this->language)
+        );
+    }
+
+    /**
+     * @return JsonResponse
+     */
+    public function truncate(): JsonResponse
+    {
+        $this->service->truncate();
+
+        return $this->successResponse(
+            __('errors.' . ResponseError::RECORD_WAS_SUCCESSFULLY_DELETED, locale: $this->language)
+        );
+    }
+
+    /**
+     * @return JsonResponse
+     */
+    public function restoreAll(): JsonResponse
+    {
+        $this->service->restoreAll();
 
         return $this->successResponse(
             __('errors.' . ResponseError::RECORD_WAS_SUCCESSFULLY_DELETED, locale: $this->language)

@@ -6,13 +6,14 @@ use App\Helpers\ResponseError;
 use App\Http\Requests\FilterParamsRequest;
 use App\Http\Requests\Tag\StoreRequest;
 use App\Http\Requests\Tag\UpdateRequest;
+use App\Http\Resources\ShopTagResource;
 use App\Http\Resources\TagResource;
 use App\Models\Product;
 use App\Models\Tag;
+use App\Repositories\ShopTagRepository\ShopTagRepository;
 use App\Repositories\TagRepository\TagRepository;
 use App\Services\TagService\TagService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class TagController extends SellerBaseController
@@ -129,6 +130,13 @@ class TagController extends SellerBaseController
         return $this->successResponse(
             __('errors.' . ResponseError::RECORD_WAS_SUCCESSFULLY_DELETED, locale: $this->language)
         );
+    }
+
+    public function shopTagsPaginate(FilterParamsRequest $request): AnonymousResourceCollection
+    {
+        $models = (new ShopTagRepository)->paginate($request->all());
+
+        return ShopTagResource::collection($models);
     }
 
 }

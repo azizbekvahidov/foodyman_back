@@ -239,16 +239,13 @@ class ProductController extends SellerBaseController
         );
     }
 
-    public function selectStockPaginate(Request $request): JsonResponse
+    public function selectStockPaginate(Request $request): AnonymousResourceCollection
     {
         $stocks = $this->productRepository->selectStockPaginate(
             $request->merge(['shop_id' => $this->shop->id])->all()
         );
 
-        return $this->successResponse(
-            __('errors.' . ResponseError::RECORD_WAS_SUCCESSFULLY_CREATED, locale: $this->language),
-            StockResource::collection($stocks)
-        );
+        return StockResource::collection($stocks);
 
     }
 
@@ -358,7 +355,7 @@ class ProductController extends SellerBaseController
             $this->error($e);
             return $this->onErrorResponse([
                 'code'      => ResponseError::ERROR_508,
-                'message'   => 'Excel format incorrect or data invalid'
+                'message'   => __('errors.' . ResponseError::ERROR_508, locale: $this->language)
             ]);
         }
     }

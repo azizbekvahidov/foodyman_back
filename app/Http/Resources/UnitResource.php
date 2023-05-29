@@ -17,6 +17,9 @@ class UnitResource extends JsonResource
     public function toArray($request): array
     {
         /** @var Unit|JsonResource $this */
+        $locales = $this->relationLoaded('translations') ?
+            $this->translations->pluck('locale')->toArray() : null;
+
         return [
             'id'            => (int) $this->id,
             'active'        => (boolean) $this->active,
@@ -27,7 +30,7 @@ class UnitResource extends JsonResource
             // Relations
             'translation'   => TranslationResource::make($this->whenLoaded('translation')),
             'translations'  => TranslationResource::collection($this->whenLoaded('translations')),
-            'locales'       => $this->whenLoaded('translations', $this->translations->pluck('locale')->toArray()),
+            'locales'       => $this->when($locales, $locales),
         ];
     }
 }

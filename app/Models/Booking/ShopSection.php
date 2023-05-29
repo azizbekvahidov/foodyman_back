@@ -28,6 +28,8 @@ use Illuminate\Support\Collection;
  * @property Shop|null $shop
  * @property ShopTranslation|null $translation
  * @property int|null $translations_count
+ * @property Table|null $tables
+ * @property int|null $tables_count
  * @property Collection|ShopTranslation[] $translations
  * @method static Builder|self newModelQuery()
  * @method static Builder|self newQuery()
@@ -49,6 +51,12 @@ class ShopSection extends Model
     public function shop(): BelongsTo
     {
         return $this->belongsTo(Shop::class);
+    }
+
+    // Tables
+    public function tables(): HasMany
+    {
+        return $this->hasMany(Table::class, 'shop_section_id');
     }
 
     // Translations

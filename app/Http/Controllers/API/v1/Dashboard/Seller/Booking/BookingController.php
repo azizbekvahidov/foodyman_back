@@ -11,7 +11,6 @@ use App\Models\Booking\Booking;
 use App\Repositories\Booking\BookingRepository\BookingRepository;
 use App\Services\Booking\BookingService\BookingService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class BookingController extends SellerBaseController
 {
@@ -27,14 +26,11 @@ class BookingController extends SellerBaseController
     /**
      * Display a listing of the resource.
      *
-     * @param FilterParamsRequest $request
-     * @return AnonymousResourceCollection
+     * @return BookingResource|array
      */
-    public function index(FilterParamsRequest $request): AnonymousResourceCollection
+    public function index(): BookingResource|array
     {
-        $model = $this->repository->paginate($request->merge(['shop_id' => $this->shop->id])->all());
-
-        return BookingResource::collection($model);
+        return $this->show();
     }
 
     /**
@@ -61,22 +57,15 @@ class BookingController extends SellerBaseController
     }
 
     /**
-     * @param Booking $booking
-     * @return JsonResponse
+     * @return BookingResource|array
      */
-    public function show(Booking $booking): JsonResponse
+    public function show(): BookingResource|array
     {
-        if ($booking->shop_id !== $this->shop->id) {
-            return $this->onErrorResponse([
-                'code'      => ResponseError::ERROR_404,
-                'message'   => __('errors.' . ResponseError::ERROR_404, locale: $this->language)
-            ]);
-        }
+        $shopId = $this->shop->id;
 
-        return $this->successResponse(
-            __('errors.' . ResponseError::SUCCESS, locale: $this->language),
-            BookingResource::make($booking)
-        );
+        $model = $this->repository->showByShopId($shopId);
+
+        return !empty($model) ? BookingResource::make($model) : ['data' => []];
     }
 
     /**

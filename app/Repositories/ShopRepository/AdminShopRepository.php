@@ -108,7 +108,7 @@ class AdminShopRepository extends CoreRepository
         $shop = $this->model();
         $locale = data_get(Language::languagesList()->where('default', 1)->first(), 'locale');
 
-        if (!Cache::get('gdfjetjb.rldf') || data_get(Cache::get('gdfjetjb.rldf'), 'active') != 1) {
+        if (!Cache::get('tytkjbjkfr.reprijvbv') || data_get(Cache::get('tytkjbjkfr.reprijvbv'), 'active') != 1) {
             abort(403);
         }
 

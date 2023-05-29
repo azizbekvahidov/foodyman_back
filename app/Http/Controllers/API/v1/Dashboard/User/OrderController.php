@@ -5,7 +5,7 @@ namespace App\Http\Controllers\API\v1\Dashboard\User;
 use App\Helpers\ResponseError;
 use App\Http\Requests\FilterParamsRequest;
 use App\Http\Requests\Order\AddReviewRequest;
-use App\Http\Requests\Order\StoreRequest;
+use App\Http\Requests\Order\UserStoreRequest;
 use App\Http\Resources\OrderResource;
 use App\Models\Cart;
 use App\Models\Order;
@@ -55,10 +55,10 @@ class OrderController extends UserBaseController
     /**
      * Store a newly created resource in storage.
      *
-     * @param StoreRequest $request
+     * @param UserStoreRequest $request
      * @return JsonResponse
      */
-    public function store(StoreRequest $request): JsonResponse
+    public function store(UserStoreRequest $request): JsonResponse
     {
         $validated = $request->validated();
 
@@ -68,7 +68,6 @@ class OrderController extends UserBaseController
 
         $validated['user_id'] = auth('sanctum')->id();
 
-        /** @var Cart $cart */
         $cart = Cart::with([
             'userCarts:id,cart_id',
             'userCarts.cartDetails:id'
@@ -81,12 +80,17 @@ class OrderController extends UserBaseController
                 'code'      => ResponseError::ERROR_404,
                 'message'   => __('errors.' . ResponseError::ERROR_404, locale: $this->language)
             ]);
-        } else if ($cart->user_carts_count === 0) {
+        }
+
+        /** @var Cart $cart */
+        if ($cart->user_carts_count === 0) {
             return $this->onErrorResponse([
                 'code'    => ResponseError::ERROR_400,
                 'message' => __('errors.' . ResponseError::USER_CARTS_IS_EMPTY, locale: $this->language)
             ]);
-        } else if ($cart->userCarts()->withCount('cartDetails')->get()->sum('cart_details_count') === 0) {
+        }
+
+        if ($cart->userCarts()->withCount('cartDetails')->get()->sum('cart_details_count') === 0) {
             return $this->onErrorResponse([
                 'code'    => ResponseError::ERROR_400,
                 'message' => __('errors.' . ResponseError::PRODUCTS_IS_EMPTY, locale: $this->language)
@@ -99,11 +103,14 @@ class OrderController extends UserBaseController
             return $this->onErrorResponse($result);
         }
 
+        $tokens = $this->tokens($result);
+
         $this->sendNotification(
-            $this->tokens($result),
+            data_get($tokens, 'tokens'),
             "New order was created",
             data_get($result, 'data.id'),
-            data_get($result, 'data')?->setAttribute('type', 'new_order')?->only(['id', 'status'])
+            data_get($result, 'data')?->setAttribute('type', 'new_order')?->only(['id', 'status']),
+            data_get($tokens, 'ids', [])
         );
 
         return $this->successResponse(
@@ -119,7 +126,7 @@ class OrderController extends UserBaseController
         ])
             ->whereHas('roles', fn($q) => $q->where('name', 'admin') )
             ->whereNotNull('firebase_token')
-            ->pluck('firebase_token')
+            ->pluck('firebase_token', 'id')
             ->toArray();
 
         $sellersFirebaseTokens = User::with([
@@ -127,7 +134,7 @@ class OrderController extends UserBaseController
         ])
             ->whereHas('shop', fn($q) => $q->where('id', data_get($result, 'data.shop_id')))
             ->whereNotNull('firebase_token')
-            ->pluck('firebase_token')
+            ->pluck('firebase_token', 'id')
             ->toArray();
 
         $aTokens = [];
@@ -138,10 +145,13 @@ class OrderController extends UserBaseController
         }
 
         foreach ($sellersFirebaseTokens as $sellerToken) {
-            $sTokens = array_merge($aTokens, is_array($sellerToken) ? array_values($sellerToken) : [$sellerToken]);
+            $sTokens = array_merge($sTokens, is_array($sellerToken) ? array_values($sellerToken) : [$sellerToken]);
         }
 
-        return array_values(array_unique(array_merge($aTokens, $sTokens)));
+        return [
+            'tokens' => array_values(array_unique(array_merge($aTokens, $sTokens))),
+            'ids'    => array_merge(array_keys($adminFirebaseTokens), array_keys($sellersFirebaseTokens))
+        ];
     }
 
     /**
@@ -165,7 +175,7 @@ class OrderController extends UserBaseController
     }
 
     /**
-     * Add Review to OrderDetails.
+     * Add Review to Order.
      *
      * @param int $id
      * @param AddReviewRequest $request
@@ -196,7 +206,7 @@ class OrderController extends UserBaseController
     }
 
     /**
-     * Add Review to OrderDetails.
+     * Add Review to Deliveryman.
      *
      * @param int $id
      * @param AddReviewRequest $request
@@ -217,8 +227,27 @@ class OrderController extends UserBaseController
     }
 
     /**
-     * Add Review to OrderDetails.
+     * Add Review to Waiter.
      *
+     * @param int $id
+     * @param AddReviewRequest $request
+     * @return JsonResponse
+     */
+    public function addWaiterReview(int $id, AddReviewRequest $request): JsonResponse
+    {
+        $result = (new OrderReviewService)->addWaiterReview($id, $request->validated());
+
+        if (!data_get($result, 'status')) {
+            return $this->onErrorResponse($result);
+        }
+
+        return $this->successResponse(
+            ResponseError::NO_ERROR,
+            $this->orderRepository->reDataOrder(data_get($result, 'data'))
+        );
+    }
+
+    /**
      * @param int $id
      * @param FilterParamsRequest $request
      * @return JsonResponse

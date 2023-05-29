@@ -136,7 +136,6 @@ class BannerService extends CoreService
 
     public function setActiveBanner(int $id): array
     {
-        /** @var Banner $banner */
         $banner = $this->model()->find($id);
 
         if (empty($banner)) {
@@ -147,6 +146,7 @@ class BannerService extends CoreService
             ];
         }
 
+        /** @var Banner $banner */
         $banner->update(['active' => !$banner->active]);
 
         return ['status' => true, 'code' => ResponseError::NO_ERROR, 'data' => $banner];

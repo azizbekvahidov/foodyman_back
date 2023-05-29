@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\ResponseError;
 use App\Models\Currency;
 use App\Models\Language;
 use App\Traits\ApiResponse;
@@ -161,5 +162,46 @@ abstract class CoreService
     {
         $this->destroy($ids);
         Cache::flush();
+    }
+
+    /**
+     * @param array $ids
+     * @param string $column
+     * @param array|null $when
+     * @return array
+     */
+    public function remove(array $ids, string $column = 'id', ?array $when = ['column' => null, 'value' => null]): array
+    {
+        $errorIds = [];
+
+        $models = $this->model()
+            ->whereIn($column, $ids)
+            ->when(data_get($when, 'column'), fn($q, $column) => $q->where($column, data_get($when, 'value')))
+            ->get();
+
+        foreach ($models as $model) {
+            try {
+                $model->delete();
+            } catch (Throwable $e) {
+                $this->error($e);
+                $errorIds[] = $model->id;
+            }
+        }
+
+        if (count($errorIds) === 0) {
+            return ['status' => true, 'code' => ResponseError::NO_ERROR];
+        }
+
+        return [
+            'status'  => false,
+            'code'    => ResponseError::ERROR_505,
+            'message' => __(
+                'errors.' . ResponseError::CANT_DELETE_IDS,
+                [
+                    'ids' => implode(', ', $errorIds)
+                ],
+                $this->language
+            )
+        ];
     }
 }

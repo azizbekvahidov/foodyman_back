@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -50,6 +51,8 @@ use Illuminate\Support\Carbon;
  * @property-read int|null $stock_extras_count
  * @property-read Collection|ExtraValue[] $stockExtrasTrashed
  * @property-read int|null $stock_extras_trashed_count
+ * @property-read Collection|ModelLog[] $logs
+ * @property-read int|null $logs_count
  * @method static StockFactory factory(...$parameters)
  * @method static Builder|Stock newModelQuery()
  * @method static Builder|Stock newQuery()
@@ -123,6 +126,11 @@ class Stock extends Model
         return $this->belongsToMany(ExtraValue::class, StockExtra::class);
     }
 
+    public function logs(): MorphMany
+    {
+        return $this->morphMany(ModelLog::class, 'model');
+    }
+
     public function stockExtrasTrashed(): BelongsToMany
     {
         return $this->belongsToMany(ExtraValue::class, StockExtra::class)->withTrashed();
@@ -131,10 +139,11 @@ class Stock extends Model
     public function getActualDiscountAttribute()
     {
         /** @var Discount $discount */
-        $discount = $this->countable?->discounts?->where('start', '<=', today())
-            ->where('end', '>=', today())
-            ->where('active', 1)
-            ->first();
+        $discount = $this->countable?->discounts ?
+            $this->countable?->discounts?->where('start', '<=', today())
+                ->where('end', '>=', today())
+                ->where('active', 1)
+                ->first() : optional();
 
         if (!$discount?->type) {
             return 0;

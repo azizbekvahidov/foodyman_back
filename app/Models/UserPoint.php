@@ -30,7 +30,7 @@ class UserPoint extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $guarded = ['id'];
+    protected $guarded = [];
 
     public $timestamps = false;
 

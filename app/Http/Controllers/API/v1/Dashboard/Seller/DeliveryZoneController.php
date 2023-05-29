@@ -78,7 +78,7 @@ class DeliveryZoneController extends SellerBaseController
     {
         if ($deliveryZone->shop_id !== data_get($this->shop, 'id')) {
             return $this->onErrorResponse([
-                'code'    => ResponseError::ERROR_104,
+                'code'    => ResponseError::ERROR_404,
                 'message' => __('errors.' . ResponseError::ERROR_404, locale: $this->language)
             ]);
         }

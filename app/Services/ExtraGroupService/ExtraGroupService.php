@@ -91,7 +91,6 @@ class ExtraGroupService extends CoreService
 
     public function setActive(int $id): array
     {
-        /** @var ExtraGroup $extraGroup */
         $extraGroup = ExtraGroup::find($id);
 
         if (empty($extraGroup)) {
@@ -102,6 +101,7 @@ class ExtraGroupService extends CoreService
             ];
         }
 
+        /** @var ExtraGroup $extraGroup */
         $extraGroup->update(['active' => !$extraGroup->active]);
 
         return [

@@ -16,7 +16,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Log;
-use MercadoPago\Payment;
+use MercadoPago\Config;
+use MercadoPago\Item;
+use MercadoPago\Preference;
 use MercadoPago\SDK;
 use Redirect;
 use Throwable;
@@ -37,26 +39,37 @@ class MercadoPagoController extends Controller
      * @return JsonResponse
      * @throws Exception
      */
-    public function orderProcessTransaction(StripeRequest $request): JsonResponse
+    public function orderProcessTransaction(Request $request): JsonResponse
     {
+        SDK::setAccessToken("TEST-6668869803819899-030119-21a35cc741cf11c0619a6eec892e3465-96344171");
 
-        SDK::setAccessToken("APP_USR-8215488031208705-072300-bc1qzk3kxhdxnzkpdgdn9ueg34y08smxgfv0hxvcu3-229435424");
+        $config = new Config();
+        $config->set('sandbox', true); // Устанавливаем режим песочницы (sandbox)
+        $config->set('access_token', 'TEST-6668869803819899-030119-21a35cc741cf11c0619a6eec892e3465-96344171'); // Устанавливаем токен доступа
 
-        $payment = new Payment();
+        $item = new Item();
+        $item->id = '001'; // Идентификатор товара
+        $item->title = 'Название товара'; // Название товара
+        $item->quantity = 1; // Количество товара
+        $item->unit_price = 10.0; // Цена за единицу товара
 
-        $payment->transaction_amount = 1000;
-        $payment->token = "APP_USR-b6449c35-1a4b-4574-96d5-c715975a8d4d";
-        $payment->description = "Ergonomic Silk Shirt";
-        $payment->installments = 1;
-        $payment->payment_method_id = "visa";
-
-        $payment->payer = array(
-            "email" => "githubit@gmail.com"
+        $preference = new Preference();
+        $preference->items = array($item); // Добавляем товар в список покупок
+        $preference->back_urls = array(
+            'success' => "https://foodyman.org/orders/3012",
+            'failure' => "https://foodyman.org/orders/3012",
+            'pending' => "https://foodyman.org/orders/3012"
         );
+        $preference->auto_return = 'approved'; // Автоматический возврат на URL после успешной оплаты
 
-        $payment->save();
+        $preference->save(); // Сохраняем настройки
 
-        dd($payment);
+        $payment_link = $preference->init_point; // Получаем ссылку для оплаты
+
+        dd(
+            $preference->Error(),
+            $payment_link,
+        );
 
         try {
             $result = $this->service->orderProcessTransaction($request->all());

@@ -121,6 +121,10 @@ return [
     $e::ATTACH_FOR_ADDON                => 'You can`t attach products for addon',
     $e::TYPE_PRICE_USER                 => 'Type, price or user is empty',
     $e::NOTHING_TO_UPDATE               => 'Nothing to update',
+    $e::WAITER_NOT_EMPTY                => 'Waiter not empty',
+    $e::EMPTY                           => 'Empty',
 
     $e::ORDER_OR_DELIVERYMAN_IS_EMPTY   => 'Order not found or deliveryman is not attached',
+    $e::TABLE_BOOKING_EXISTS            => 'This table is already has reservation. From :start_date to :end_date',
+    $e::DELIVERYMAN_SETTING_EMPTY       => 'Your setting is empty',
 ];

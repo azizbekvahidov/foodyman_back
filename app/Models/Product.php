@@ -46,6 +46,11 @@ use Illuminate\Support\Carbon;
  * @property boolean $active
  * @property boolean $addon
  * @property string $status
+ * @property string $vegetarian
+ * @property string $kcal
+ * @property string $carbs
+ * @property string $protein
+ * @property string $fats
  * @property-read Brand $brand
  * @property-read Collection|Tag[] $tags
  * @property-read Category $category
@@ -67,6 +72,7 @@ use Illuminate\Support\Carbon;
  * @property-read int|null $addons_count
  * @property-read Collection|Review[] $reviews
  * @property-read int|null $reviews_count
+ * @property-read int|null $reviews_avg_rating
  * @property-read Shop $shop
  * @property-read Collection|Stock[] $stocks
  * @property-read Stock|null $stock
@@ -75,6 +81,8 @@ use Illuminate\Support\Carbon;
  * @property-read Collection|ProductTranslation[] $translations
  * @property-read int|null $translations_count
  * @property-read Unit|null $unit
+ * @property-read Collection|ModelLog[] $logs
+ * @property-read int|null $logs_count
  * @method static ProductFactory factory(...$parameters)
  * @method static Builder|Product filter($array)
  * @method static Builder|Product active($active)
@@ -107,8 +115,9 @@ class Product extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
-        'active' => 'bool',
-        'addon'  => 'bool',
+        'active'     => 'bool',
+        'addon'      => 'bool',
+        'vegetarian' => 'bool'
     ];
 
     const PUBLISHED     = 'published';
@@ -202,6 +211,11 @@ class Product extends Model
         return $this->hasMany(Tag::class);
     }
 
+    public function logs(): MorphMany
+    {
+        return $this->morphMany(ModelLog::class, 'model');
+    }
+
     public function scopeUpdatedDate($query, $updatedDate)
     {
         return $query->where('updated_at', '>', $updatedDate);
@@ -244,6 +258,21 @@ class Product extends Model
             })
             ->when(isset($array['status']), function ($q) use ($array) {
                 $q->where('status', $array['status']);
+            })
+            ->when(isset($array['vegetarian']), function ($q) use ($array) {
+                $q->where('vegetarian', $array['vegetarian']);
+            })
+            ->when(isset($array['kcal']), function ($q) use ($array) {
+                $q->where('kcal', $array['kcal']);
+            })
+            ->when(isset($array['carbs']), function ($q) use ($array) {
+                $q->where('carbs', $array['carbs']);
+            })
+            ->when(isset($array['protein']), function ($q) use ($array) {
+                $q->where('protein', $array['protein']);
+            })
+            ->when(isset($array['fats']), function ($q) use ($array) {
+                $q->where('fats', $array['fats']);
             })
             ->when(isset($array['brand_id']), function ($q) use ($array) {
                 $q->where('brand_id', $array['brand_id']);
@@ -306,30 +335,7 @@ class Product extends Model
                 $q->withAvg('stocks', 'price')->orderBy('stocks_avg_price', data_get($array, 'sort', 'desc'));
             })
             ->when(isset($array['with_addon']), fn($query, $addon) => $query->whereHas('stocks', fn($q) => $q->whereHas('addons')))
-            ->when(data_get($array, 'order_by'), function (Builder $query, $orderBy) {
-
-                switch ($orderBy) {
-                    case 'new':
-                        $query->orderBy('created_at', 'desc');
-                        break;
-                    case 'old':
-                        $query->orderBy('created_at');
-                        break;
-                    case 'best_sale':
-                        $query->withCount('orderDetails')->orderBy('order_details_count', 'desc');
-                        break;
-                    case 'low_sale':
-                        $query->withCount('orderDetails')->orderBy('order_details_count');
-                        break;
-                    case 'high_rating':
-                        $query->withAvg('reviews', 'rating')->orderBy('reviews_avg_rating', 'desc');
-                        break;
-                    case 'low_rating':
-                        $query->withCount('reviews')->orderBy('reviews_avg_rating');
-                        break;
-                }
-
-            }, fn($q) => $q->orderBy(
+            ->when(isset($array['column']), fn($query, $addon) => $query->orderBy(
                 data_get($array, 'column', 'id'),
                 data_get($array, 'sort', 'desc')
             ));

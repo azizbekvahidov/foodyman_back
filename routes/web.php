@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Web\ConvertController;
 use App\Http\Controllers\API\v1\Dashboard\Payment\{
     MercadoPagoController,
     PayStackController,
@@ -38,3 +39,5 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('convert', [ConvertController::class, 'index'])->name('convert');
+Route::post('convert-post', [ConvertController::class, 'getFile'])->name('convertPost');

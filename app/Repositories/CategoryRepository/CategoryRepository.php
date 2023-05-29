@@ -38,9 +38,25 @@ class CategoryRepository extends CoreRepository implements CategoryRepoInterface
         $category = $this->model();
 
         return $category
-            ->withThreeChildren(['language' => $this->language])
             ->updatedDate($this->updatedDate)
             ->filter($filter)
+            ->with([
+                'translations',
+                'translation' => fn($q) => $q->select('id', 'locale', 'title', 'category_id')
+                    ->where('locale', $this->language),
+
+                'children' => fn($q) => $q->select(['id', 'uuid', 'keywords', 'parent_id', 'type', 'img', 'active']),
+                'children.translations',
+                'children.translation' => fn($q) => $q->select('id', 'locale', 'title', 'category_id')
+                    ->where('locale', $this->language),
+
+                'children.children' => fn($q) => $q->select([
+                    'id', 'uuid', 'keywords', 'parent_id', 'type', 'img', 'active'
+                ]),
+                'children.children.translations',
+                'children.children.translation' => fn($q) => $q->select('id', 'locale', 'title', 'category_id')
+                    ->where('locale', $this->language),
+            ])
             ->where(fn($q) => $q->where('parent_id', null)->orWhere('parent_id', 0))
             ->whereHas('translation',
                 fn($q) => $q->select('id', 'locale', 'title', 'category_id')->where('locale', $this->language),

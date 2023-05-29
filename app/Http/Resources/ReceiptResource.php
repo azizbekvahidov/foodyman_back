@@ -33,6 +33,7 @@ class ReceiptResource extends JsonResource
             'id'                    => $this->when($this->id, $this->id),
             'shop_id'               => $this->when($this->shop_id, $this->shop_id),
             'img'                   => $this->when($this->img, $this->img),
+            'bg_img'                => $this->when($this->bg_img, $this->bg_img),
             'discount_type'         => $this->when($type, $type),
             'discount_price'        => $this->when($this->discount_price, $this->discount_price),
             'category_id'           => $this->when($this->category_id, $this->category_id),

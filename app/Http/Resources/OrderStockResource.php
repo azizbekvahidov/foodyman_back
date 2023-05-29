@@ -34,6 +34,7 @@ class OrderStockResource extends JsonResource
             'extras'            => ExtraValueResource::collection($this->whenLoaded('stockExtras')),
             'product'           => ProductResource::make(
                 $this->countable()->withTrashed()->first()->loadMissing([
+                    'translations',
                     'translation' => fn($q) => $q->withTrashed()->when(\request('lang'), function ($query) {
                         $query->where('locale', \request('lang'));
                     })

@@ -6,8 +6,8 @@ use App\Jobs\AttachDeliveryMan;
 use App\Models\Language;
 use App\Models\Order;
 use App\Models\Settings;
+use App\Services\ModelLogService\ModelLogService;
 use App\Traits\Notification;
-use Illuminate\Support\Facades\Log;
 
 class OrderObserver
 {
@@ -19,11 +19,13 @@ class OrderObserver
      * @param Order $order
      * @return void
      */
-    public function created(Order $order)
+    public function created(Order $order): void
     {
         if ($order->status === Order::STATUS_ACCEPTED && empty($order->deliveryman) && $this->autoDeliveryMan()) {
             AttachDeliveryMan::dispatchAfterResponse($order, $this->language());
         }
+
+        (new ModelLogService)->logging($order, $order->getAttributes(), 'created');
     }
 
     /**
@@ -32,11 +34,35 @@ class OrderObserver
      * @param Order $order
      * @return void
      */
-    public function updated(Order $order)
+    public function updated(Order $order): void
     {
         if ($order->status === Order::STATUS_ACCEPTED && empty($order->deliveryman) && $this->autoDeliveryMan()) {
             AttachDeliveryMan::dispatchAfterResponse($order, $this->language());
         }
+
+        (new ModelLogService)->logging($order, $order->getAttributes(), 'updated');
+    }
+
+    /**
+     * Handle the Order "restored" event.
+     *
+     * @param Order $order
+     * @return void
+     */
+    public function deleted(Order $order): void
+    {
+        (new ModelLogService)->logging($order, $order->getAttributes(), 'deleted');
+    }
+
+    /**
+     * Handle the Order "restored" event.
+     *
+     * @param Order $order
+     * @return void
+     */
+    public function restored(Order $order): void
+    {
+        (new ModelLogService)->logging($order, $order->getAttributes(), 'restored');
     }
 
     /**

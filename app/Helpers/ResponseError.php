@@ -59,6 +59,7 @@ class ResponseError
     public const ERROR_430 = 'ERROR_430'; // 'Stock quantity 0'
     public const ERROR_431 = 'ERROR_431'; // 'Active default currency not found'
     public const ERROR_432 = 'ERROR_432'; // 'Undefined Type'
+    public const ERROR_433 = 'ERROR_433'; // 'Not in polygon'
 
     public const ERROR_501 = 'ERROR_501'; // 'Error during created.'
     public const ERROR_502 = 'ERROR_502'; // 'Error during updated.'
@@ -85,8 +86,8 @@ class ResponseError
     public const LANGUAGE_NOT_FOUND                 = 'LANGUAGE_NOT_FOUND'; // 'Language not found'
     public const CANT_DELETE_ORDERS                 = 'CANT_DELETE_ORDERS'; // 'can`t delete orders :ids'
     public const CANT_UPDATE_ORDERS                 = 'CANT_UPDATE_ORDERS'; // 'can`t update orders :ids'
-    public const STATUS_CHANGED                     = 'STATUS_CHANGED'; // 'can`t update orders :ids'
-    public const PAYOUT_ACCEPTED                    = 'PAYOUT_ACCEPTED'; // 'can`t update orders :ids'
+    public const STATUS_CHANGED                     = 'STATUS_CHANGED'; // 'STATUS_CHANGED'
+    public const PAYOUT_ACCEPTED                    = 'PAYOUT_ACCEPTED'; // 'PAYOUT_ACCEPTED'
     public const CANT_DELETE_IDS                    = 'CANT_DELETE_IDS'; // 'can`t delete :ids'
     public const USER_NOT_FOUND                     = 'USER_NOT_FOUND'; // 'User not found'
     public const USER_IS_BANNED                     = 'USER_IS_BANNED'; // 'User is banned!'
@@ -106,8 +107,10 @@ class ResponseError
     public const ATTACH_FOR_ADDON                   = 'ATTACH_FOR_ADDON';
     public const TYPE_PRICE_USER                    = 'TYPE_PRICE_USER';
     public const NOTHING_TO_UPDATE                  = 'NOTHING_TO_UPDATE';
-
+    public const WAITER_NOT_EMPTY                   = 'WAITER_NOT_EMPTY';
+    public const COOKER_NOT_EMPTY                   = 'COOKER_NOT_EMPTY';
+    public const EMPTY                              = 'EMPTY';
     public const ORDER_OR_DELIVERYMAN_IS_EMPTY      = 'ORDER_OR_DELIVERYMAN_IS_EMPTY';
-
-
+    public const TABLE_BOOKING_EXISTS               = 'TABLE_BOOKING_EXISTS';
+    public const DELIVERYMAN_SETTING_EMPTY          = 'DELIVERYMAN_SETTING_EMPTY';
 }

@@ -64,13 +64,13 @@ class RazorPayController extends Controller
      */
     public function subscriptionProcessTransaction(SubscriptionRequest $request): array
     {
-        /** @var Shop $shop */
         $shop = auth('sanctum')->user()?->shop ?? auth('sanctum')->user()?->moderatorShop;
 
         if (empty($shop)) {
             return ['status' => false, 'code' => ResponseError::ERROR_101];
         }
 
+        /** @var Shop $shop */
         $currency = Currency::currenciesList()->where('active', 1)->where('default', 1)->first()?->title;
 
         if (empty($currency)) {

@@ -115,10 +115,10 @@ class LoginController extends Controller
                     $user->syncRoles('user');
                 }
 
-                $id = Notification::where('type', Notification::PUSH)->select(['id', 'type'])->first()?->id;
+                $ids = Notification::pluck('id')->toArray();
 
-                if ($id) {
-                    $user->notifications()->sync([$id]);
+                if ($ids) {
+                    $user->notifications()->sync($ids);
                 } else {
                     $user->notifications()->forceDelete();
                 }
@@ -188,6 +188,13 @@ class LoginController extends Controller
     public function forgetPasswordEmail(ReSendVerifyRequest $request): JsonResponse
     {
         $user = User::withTrashed()->where('email', $request->input('email'))->first();
+
+        if(!$user) {
+            return $this->onErrorResponse([
+                'code'      => ResponseError::ERROR_404,
+                'message'   => __('errors.' . ResponseError::ERROR_404, locale: $this->language),
+            ]);
+        }
 
         $token = mb_substr(time(), -6, 6);
 

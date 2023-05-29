@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\v1\Rest;
 use App\Helpers\ResponseError;
 use App\Helpers\Utility;
 use App\Http\Requests\FilterParamsRequest;
+use App\Http\Requests\Shop\CheckWorkingDayRequest;
 use App\Http\Resources\CategoryResource;
 use App\Http\Resources\ProductResource;
 use App\Http\Resources\ReviewResource;
@@ -23,6 +24,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
+use Str;
+use Throwable;
 
 class ShopController extends RestBaseController
 {
@@ -304,12 +307,12 @@ class ShopController extends RestBaseController
      */
     public function galleries(int $id): ShopGalleryResource|JsonResponse
     {
-        /** @var ShopGallery $shopGallery */
         $shopGallery = ShopGallery::with(['galleries'])
             ->where('shop_id', $id)
+            ->where('active', 1)
             ->first();
 
-        if (empty($shopGallery) && !$shopGallery->active) {
+        if (empty($shopGallery)) {
             return $this->onErrorResponse([
                 'code'    => ResponseError::ERROR_404,
                 'message' => __('errors.' . ResponseError::ERROR_404, locale: $this->language)
@@ -373,5 +376,51 @@ class ShopController extends RestBaseController
             'count' => $reviews->sum('count'),
             'avg'   => $reviews->avg('rating'),
         ];
+    }
+
+    /**
+     * Search shop Model from database via IDs.
+     *
+     * @param int $id
+     * @param CheckWorkingDayRequest $request
+     * @return JsonResponse|AnonymousResourceCollection
+     */
+    public function shopWorkingCheck(int $id, CheckWorkingDayRequest $request): JsonResponse|AnonymousResourceCollection
+    {
+        $date = date('Y-m-d', strtotime($request->input('date')));
+        $day  = Str::lower(date('l', strtotime($request->input('date'))));
+        $time = date('H:i', strtotime($request->input('date')));
+
+        $exists = false;
+
+        $shop = Shop::whereHas('workingDays', fn($q) => $q
+            ->where('disabled', 0)
+            ->where('day', $day)
+//            ->where('from', '>=', str_replace(':', '-', $time))
+//            ->where('to', '<=', str_replace(':', '-', $time))
+        )
+            ->whereDoesntHave('closedDates', fn($q) => $q->where('date', $date))
+            ->find($id);
+
+        if (!empty($shop)) {
+
+            foreach ($shop->workingDays as $workingDay) {
+
+                try {
+                    if (
+                        $time >= date('H:i', strtotime(str_replace('-', ':', $workingDay->from))) &&
+                        $time <= date('H:i', strtotime(str_replace('-', ':', $workingDay->to)))
+                    ) {
+                        $exists = true;
+                    }
+                } catch (Throwable) {
+
+                }
+
+            }
+
+        }
+
+        return $this->successResponse(__('errors.' . ResponseError::SUCCESS, locale: $this->language), $exists);
     }
 }

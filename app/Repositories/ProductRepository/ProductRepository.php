@@ -38,49 +38,47 @@ class ProductRepository extends CoreRepository implements ProductRepoInterface
     {
         /** @var Product $product */
         $product = $this->model();
+        $locale  = data_get(Language::languagesList()->where('default', 1)->first(), 'locale');
 
         return $product
             ->filter($filter)
             ->updatedDate($this->updatedDate)
             ->with([
-                'shop' => fn($q) => $q->select('id', 'uuid', 'user_id', 'logo_img', 'background_img', 'type', 'status')
+                'stocks' => fn($q) => $q->where('addon', false)->where('quantity', '>', 0),
+                'stocks.addons.addon' => fn($query) => $query->when(data_get($filter, 'addon_status'),
+                    fn($q, $status) => $q->with([
+                        'stock'         => fn($q) => $q->where('addon', true)->where('quantity', '>', 0),
+                        'translation'   => fn($q) => $q->where('locale', $this->language)->orWhere('locale', $locale),
+                    ])
+                        ->whereHas('stock', fn($q) => $q->where('addon', true)->where('quantity', '>', 0))
+                        ->whereHas('translation', fn($q) => $q->where('locale', $this->language)->orWhere('locale', $locale))
+                        ->where('active', true)
+                        ->where('status', '=', $status)
+                ),
+                'stocks.bonus' => fn($q) => $q->where('expired_at', '>', now())->select([
+                    'id', 'expired_at', 'bonusable_type', 'bonusable_id',
+                    'bonus_quantity', 'value', 'type', 'status'
+                ]),
+                'stocks.bonus.stock',
+                'stocks.bonus.stock.stockExtras',
+                'stocks.bonus.stock.countable:id,uuid,tax,bar_code,status,active,img,min_qty,max_qty',
+                'stocks.bonus.stock.countable.translation' => fn($q) => $q->select('id', 'product_id', 'title', 'locale'),
+                'stocks.stockExtras.group.translation' => fn($q) => $q->where('locale', $this->language)->orWhere('locale', $locale),
+                'discounts' => fn($q) => $q->where('start', '<=', today())->where('end', '>=', today())->where('active', 1),
+                'translation' => fn($q) => $q->where('locale', $this->language)->orWhere('locale', $locale),
+                'shop' => fn($q) => $q->select('id', 'status')
                     ->when(data_get($filter, 'shop_status'), function ($q, $status) {
                         $q->where('status', '=', $status);
                     }
-                ),
+                    ),
                 'shop.translation' => fn($q) => $q->where('locale', $this->language)
                     ->select('id', 'locale', 'title', 'shop_id'),
-                'stocks.addons.addon' => fn($query) =>
-                    $query
-                        ->when(data_get($filter, 'addon_status'), fn($q, $status) => $q
-                            ->where('active', true)
-                            ->where('status', '=', $status)
-                ),
-                'stocks.addons.addon.stock',
-                'stocks.addons.addon.translation' => fn($q) => $q->where('locale', $this->language),
-                'stocks' => fn($q) => $q->where('quantity', '>', 0),
-                'stocks.bonus' => fn($q) => $q->where('expired_at', '>', now()),
-                'stocks.bonus.stock',
-                'stocks.bonus.stock.countable:id,uuid,tax,bar_code,status,active,img,min_qty,max_qty',
-                'stocks.bonus.stock.countable.translation' => fn($q) => $q->select('id', 'product_id', 'title', 'locale'),
-                'stocks.stockExtras.group.translation' => fn($q) => $q->where('locale', $this->language),
-                'discounts',
-                'translation' => fn($q) => $q->where('locale', $this->language),
+                'reviews',
+                'translations',
                 'category' => fn($q) => $q->select('id', 'uuid'),
                 'category.translation' => fn($q) => $q->where('locale', $this->language)
                     ->select('id', 'category_id', 'locale', 'title'),
-                'brand' => fn($q) => $q->select('id', 'uuid', 'title'),
-                'unit.translation' => fn($q) => $q->where('locale', $this->language),
-                'tags.translation' => fn($q) => $q->select('id', 'category_id', 'locale', 'title')
-                    ->where('locale', $this->language),
             ])
-            ->withAvg('reviews', 'rating')
-            ->whereHas('translation', fn($query) => $query->where('locale', $this->language))
-            ->when(data_get($filter, 'shop_status'), function ($q, $status) {
-                $q->whereHas('shop', function (Builder $query) use ($status) {
-                    $query->where('status', '=', $status);
-                });
-            })
             ->paginate(data_get($filter, 'perPage', 10));
     }
 
@@ -95,7 +93,7 @@ class ProductRepository extends CoreRepository implements ProductRepoInterface
                 'stocks.addons.addon.translation' => fn($q) => $q->where('locale', $this->language),
                 'galleries' => fn($q) => $q->select('id', 'type', 'loadable_id', 'path', 'title'),
                 'stocks.stockExtras.group.translation' => fn($q) => $q->where('locale', $this->language),
-                'discounts',
+                'discounts' => fn($q) => $q->where('start', '<=', today())->where('end', '>=', today())->where('active', 1),
                 'translation' => fn($q) => $q->where('locale', $this->language)
                     ->select('id', 'product_id', 'locale', 'title'),
                 'category.translation' => fn($q) => $q->where('locale', $this->language)
@@ -125,7 +123,7 @@ class ProductRepository extends CoreRepository implements ProductRepoInterface
                     ->where('status', Product::PUBLISHED),
                 'stocks.addons.addon.stock',
                 'stocks.addons.addon.translation' => fn($q) => $q->where('locale', $this->language),
-                'discounts',
+                'discounts' => fn($q) => $q->where('start', '<=', today())->where('end', '>=', today())->where('active', 1),
                 'shop.translation' => fn($q) => $q->where('locale', $this->language),
                 'category' => fn($q) => $q->select('id', 'uuid'),
                 'category.translation' => fn($q) => $q->where('locale', $this->language)
@@ -150,7 +148,7 @@ class ProductRepository extends CoreRepository implements ProductRepoInterface
                 'stocks.addons.addon.stock',
                 'stocks.addons.addon.translation' => fn($q) => $q->where('locale', $this->language),
                 'stocks.stockExtras.group.translation' => fn($q) => $q->where('locale', $this->language),
-                'discounts',
+                'discounts' => fn($q) => $q->where('start', '<=', today())->where('end', '>=', today())->where('active', 1),
                 'translation' => fn($q) => $q->where('locale', $this->language)
                     ->select('id', 'product_id', 'locale', 'title'),
                 'tags.translation' => fn($q) => $q->select('id', 'category_id', 'locale', 'title')
@@ -203,7 +201,7 @@ class ProductRepository extends CoreRepository implements ProductRepoInterface
             'countable.translation' => fn($q) => $q->select('id', 'product_id', 'locale', 'title')
                 ->where('locale', $this->language),
         ])
-            ->when(isset($array['addon']), fn($query, $addon) => $query->whereAddon($addon),
+            ->when(isset($data['addon']), fn($query) => $query->whereAddon($data['addon']),
                 fn($query) => $query->whereAddon(0)
             )
             ->whereHas('countable', fn($q) => $q->where('shop_id', data_get($data, 'shop_id') )
@@ -215,9 +213,6 @@ class ProductRepository extends CoreRepository implements ProductRepoInterface
                             ->orWhereHas('translation', function ($q) use ($s) {
                                 $q->where('title', 'LIKE', "%$s%")
                                     ->select('id', 'product_id', 'locale', 'title');
-                            })
-                            ->orWhereHas('shop', function ($q) use ($s) {
-                                $q->where('take', 'like', "%$s%");
                             });
                     });
 

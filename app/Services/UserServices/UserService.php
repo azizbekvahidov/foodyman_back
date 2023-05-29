@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\UserServices;
 
 use App\Helpers\ResponseError;
@@ -26,8 +27,6 @@ class UserService extends CoreService implements UserServiceInterface
     public function create(array $data): array
     {
         try {
-            /** @var User $user */
-
             $password = bcrypt(data_get($data, 'password', 'password'));
 
             unset($data['password']);
@@ -36,6 +35,7 @@ class UserService extends CoreService implements UserServiceInterface
                 $data['firebase_token'] = [data_get($data, 'firebase_token')];
             }
 
+            /** @var User $user */
             $user = $this->model()->create($data + [
                 'password'   => $password,
                 'ip_address' => request()->ip()
@@ -48,20 +48,23 @@ class UserService extends CoreService implements UserServiceInterface
 
             $user->syncRoles(data_get($data, 'role', 'user'));
 
-            if($user->hasRole(['moderator', 'deliveryman']) && is_array(data_get($data, 'shop_id'))) {
+            if($user->hasRole(['moderator', 'deliveryman', 'waiter']) && is_array(data_get($data, 'shop_id'))) {
 
                 foreach (data_get($data, 'shop_id') as $shopId) {
-                    $user->invitations()->create([
+
+                    $user->invitations()->withTrashed()->updateOrCreate([
                         'shop_id' => $shopId,
+                    ], [
+                        'deleted_at' => null
                     ]);
                 }
 
             }
 
-            $id = Notification::where('type', Notification::PUSH)->select(['id', 'type'])->first()?->id;
+            $ids = Notification::pluck('id')->toArray();
 
-            if ($id) {
-                $user->notifications()->sync([$id]);
+            if ($ids) {
+                $user->notifications()->sync($ids);
             } else {
                 $user->notifications()->forceDelete();
             }
@@ -79,7 +82,8 @@ class UserService extends CoreService implements UserServiceInterface
                 'code'   => ResponseError::NO_ERROR,
                 'data'   => $user->loadMissing(['invitations', 'roles'])
             ];
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
+            $this->error($e);
             return [
                 'status'  => false,
                 'code'    => ResponseError::ERROR_501,
@@ -146,11 +150,13 @@ class UserService extends CoreService implements UserServiceInterface
 
             }
 
-            if($user->hasRole(['moderator', 'deliveryman']) && is_array(data_get($data, 'shop_id'))) {
+            if($user->hasRole(['moderator', 'deliveryman', 'waiter']) && is_array(data_get($data, 'shop_id'))) {
                 $user->invitations()->delete();
                 foreach (data_get($data, 'shop_id') as $shopId) {
-                    $user->invitations()->create([
+                    $user->invitations()->withTrashed()->updateOrCreate([
                         'shop_id' => $shopId,
+                    ], [
+                        'deleted_at' => null
                     ]);
                 }
 
@@ -198,14 +204,17 @@ class UserService extends CoreService implements UserServiceInterface
     public function updateNotifications(array $data): array
     {
         try {
-            auth('sanctum')->user()->notifications()->sync(data_get($data, 'notifications'));
+            /** @var User $user */
+            $user = auth('sanctum')->user();
+
+            $user->notifications()->sync(data_get($data, 'notifications'));
 
             return [
                 'status' => true,
                 'code'   => ResponseError::NO_ERROR,
-                'data'   => auth('sanctum')->user()->loadMissing('notifications')
+                'data'   => $user->loadMissing('notifications')
             ];
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             $this->error($e);
             return [
                 'status'  => false,

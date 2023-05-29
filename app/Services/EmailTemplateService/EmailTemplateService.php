@@ -22,7 +22,7 @@ class EmailTemplateService extends CoreService
     public function create(array $data): array
     {
         try {
-            $verify         = EmailTemplate::TYPE_VERIFY;
+            $verify = EmailTemplate::TYPE_VERIFY;
 
             if (
                 $data['type'] === $verify && (
@@ -38,7 +38,7 @@ class EmailTemplateService extends CoreService
             }
 
             /** @var EmailTemplate $emailTemplate */
-            $emailTemplate = DB::transaction(function () use ($verify) {
+            $emailTemplate = DB::transaction(function () use ($data, $verify) {
                 $data['status'] = 0;
 
                 if ($data['type'] === $verify) {
@@ -58,6 +58,7 @@ class EmailTemplateService extends CoreService
             return [
                 'status'    => true,
                 'code'      => ResponseError::NO_ERROR,
+                'data'      => $emailTemplate,
             ];
         } catch (Throwable $e) {
 
@@ -65,8 +66,8 @@ class EmailTemplateService extends CoreService
 
             return [
                 'status'  => false,
-                'code'    => ResponseError::ERROR_502,
-                'message' => __('errors.' . ResponseError::ERROR_502, locale: $this->language)
+                'code'    => ResponseError::ERROR_501,
+                'message' => __('errors.' . ResponseError::ERROR_501, locale: $this->language)
             ];
         }
     }

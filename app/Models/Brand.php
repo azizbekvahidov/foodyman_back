@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
@@ -29,6 +30,8 @@ use Illuminate\Support\Carbon;
  * @property-read int|null $galleries_count
  * @property-read Collection|Product[] $products
  * @property-read int|null $products_count
+ * @property-read Collection|ModelLog[] $logs
+ * @property-read int|null $logs_count
  * @method static BrandFactory factory(...$parameters)
  * @method static Builder|Brand filter($array)
  * @method static Builder|Brand newModelQuery()
@@ -54,6 +57,11 @@ class Brand extends Model
     public function products(): HasMany
     {
         return $this->hasMany(Product::class);
+    }
+
+    public function logs(): MorphMany
+    {
+        return $this->morphMany(ModelLog::class, 'model');
     }
 
     public function scopeUpdatedDate($query, $updatedDate)

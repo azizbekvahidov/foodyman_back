@@ -61,11 +61,8 @@ class TableService extends CoreService
 
     public function delete(?array $ids = [], ?int $shopId = null): array
     {
-        $models = Table::with([
-            'shopSection' => fn($q) => $q->where('shop_id', $shopId)
-        ])
-            ->whereIn('id', is_array($ids) ? $ids : [])
-            ->when($shopId, fn($q) => $q->whereHas('shopSection', fn($q) => $q->where('shop_id', $shopId)))
+        $models = Table::whereIn('id', is_array($ids) ? $ids : [])
+            ->when($shopId, fn($q) => $q->whereHas('shopSection', fn($b) => $b->withTrashed()->where('shop_id', $shopId)))
             ->get();
 
         $errorIds = [];

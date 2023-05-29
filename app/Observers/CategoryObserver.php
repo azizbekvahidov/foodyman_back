@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ShopCategory;
+use App\Services\ModelLogService\ModelLogService;
 use Exception;
 use Illuminate\Support\Str;
 
@@ -30,7 +31,7 @@ class CategoryObserver
      */
     public function created(Category $category): void
     {
-        //
+        (new ModelLogService)->logging($category, $category->getAttributes(), 'created');
     }
 
     /**
@@ -41,7 +42,7 @@ class CategoryObserver
      */
     public function updated(Category $category): void
     {
-        //
+        (new ModelLogService)->logging($category, $category->getAttributes(), 'updated');
     }
 
     /**
@@ -61,6 +62,8 @@ class CategoryObserver
                 'category_id' => null
             ]);
         }
+
+        (new ModelLogService)->logging($category, $category->getAttributes(), 'deleted');
     }
 
     /**
@@ -71,5 +74,6 @@ class CategoryObserver
      */
     public function restored(Category $category): void
     {
+        (new ModelLogService)->logging($category, $category->getAttributes(), 'restored');
     }
 }

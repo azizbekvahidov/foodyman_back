@@ -39,6 +39,7 @@ class ReceiptService extends CoreService
             $type                   = data_get($data, 'discount_type', 'fix');
             $data['discount_type']  = data_get(Receipt::DISCOUNT_TYPES, $type, 0);
             $data['img']            = data_get($data, 'images.0');
+            $data['bg_img']         = data_get($data, 'images.1');
 
             $model = DB::transaction(function () use ($data) {
                 $model = $this->model()->create($data);
@@ -86,6 +87,7 @@ class ReceiptService extends CoreService
             $type                   = data_get($data, 'discount_type', 'fix');
             $data['discount_type']  = data_get(Receipt::DISCOUNT_TYPES, $type, 0);
             $data['img']            = data_get($data, 'images.0');
+            $data['bg_img']         = data_get($data, 'images.1');
 
             DB::transaction(function () use ($model, $data) {
 

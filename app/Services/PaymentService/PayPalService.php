@@ -66,8 +66,8 @@ class PayPalService extends CoreService
             $response = $provider->createOrder([
                 'intent' => 'CAPTURE',
                 'application_context' => [
-                    'return_url' => config('app.return_url') . '/' . data_get($data, 'id'),
-                    'cancel_url' => config('app.cancel_url') . '/' . data_get($data, 'id'),
+                    'return_url' => config('app.front_url') . '/' . data_get($data, 'id'),
+                    'cancel_url' => config('app.front_url') . '/' . data_get($data, 'id'),
                 ],
                 'purchase_units' => [
                     [

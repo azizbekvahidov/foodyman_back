@@ -3,15 +3,14 @@
 namespace App\Observers;
 
 use App\Models\User;
-use Exception;
-use Illuminate\Support\Facades\Cache;
+use App\Services\ModelLogService\ModelLogService;
 use Illuminate\Support\Str;
 use Psr\SimpleCache\InvalidArgumentException;
 
 class UserObserver
 {
     /**
-     * Handle the Shop "creating" event.
+     * Handle the User "creating" event.
      *
      * @param User $user
      * @return void
@@ -40,6 +39,8 @@ class UserObserver
     public function created(User $user): void
     {
         $user->point()->create();
+
+        (new ModelLogService)->logging($user, $user->getAttributes(), 'created');
     }
 
     /**
@@ -50,7 +51,7 @@ class UserObserver
      */
     public function updated(User $user): void
     {
-        //
+        (new ModelLogService)->logging($user, $user->getAttributes(), 'updated');
     }
 
     /**
@@ -61,7 +62,7 @@ class UserObserver
      */
     public function deleted(User $user): void
     {
-        //
+        (new ModelLogService)->logging($user, $user->getAttributes(), 'deleted');
     }
 
     /**
@@ -72,7 +73,7 @@ class UserObserver
      */
     public function restored(User $user): void
     {
-        //
+        (new ModelLogService)->logging($user, $user->getAttributes(), 'restored');
     }
 
 }

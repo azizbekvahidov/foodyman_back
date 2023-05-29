@@ -149,16 +149,16 @@ class UserController extends AdminBaseController
     public function updateRole($uuid, Request $request): JsonResponse
     {
         try {
-            /** @var User $user */
             $user = $this->userRepository->userByUUID($uuid);
 
             if (empty($user)) {
                 return $this->onErrorResponse([
-                'code'    => ResponseError::ERROR_404,
-                'message' => __('errors.' . ResponseError::ERROR_404, locale: $this->language)
-            ]);
+                    'code'    => ResponseError::ERROR_404,
+                    'message' => __('errors.' . ResponseError::ERROR_404, locale: $this->language)
+                ]);
             }
 
+            /** @var User $user */
             if (
                 $user->shop && $user->shop->status == 'approved' ||
                 $user->role == 'seller' || $request->input('role') == 'seller'
@@ -245,7 +245,6 @@ class UserController extends AdminBaseController
 
     public function setActive(string $uuid): JsonResponse
     {
-        /** @var User $user */
         $user = $this->userRepository->userByUUID($uuid);
 
         if (empty($user)) {
@@ -255,6 +254,7 @@ class UserController extends AdminBaseController
             ]);
         }
 
+        /** @var User $user */
         $user->active = !$user->active;
         $user->save();
 
@@ -273,7 +273,6 @@ class UserController extends AdminBaseController
      */
     public function topUpWallet(string $uuid, FilterParamsRequest $request): JsonResponse
     {
-        /** @var User $user */
         $user = User::with('wallet.histories')->firstWhere('uuid', $uuid);
 
         if (empty($user)) {
@@ -283,6 +282,7 @@ class UserController extends AdminBaseController
             ]);
         }
 
+        /** @var User $user */
         $result = (new UserWalletService)->update($user, [
                 'price' => $request->input('price'),
                 'note'  => $request->input('note')
@@ -307,7 +307,6 @@ class UserController extends AdminBaseController
      */
     public function walletHistories(string $uuid): JsonResponse|AnonymousResourceCollection
     {
-        /** @var User $user */
         $user = User::with('wallet')->firstWhere('uuid', $uuid);
 
         if (empty($user)) {
@@ -317,6 +316,7 @@ class UserController extends AdminBaseController
             ]);
         }
 
+        /** @var User $user */
         $histories = (new WalletHistoryRepository)->walletHistoryPaginate(
             ['wallet_uuid' => $user->wallet?->uuid],
         );

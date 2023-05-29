@@ -3,10 +3,8 @@
 namespace App\Services\PointService;
 
 use App\Helpers\ResponseError;
-use App\Http\Resources\PointResource;
 use App\Models\Point;
 use App\Services\CoreService;
-use Illuminate\Http\JsonResponse;
 use Throwable;
 
 class PointService extends CoreService
@@ -61,7 +59,7 @@ class PointService extends CoreService
      */
     public function setActive(int $id): array
     {
-        /** @var Point $point */
+        /** @var Point|null $point */
         $point = $this->model()->find($id);
 
         if (empty($point)) {

@@ -30,10 +30,10 @@ class RestProductRepository extends CoreRepository
                 'stocks' => fn($q) => $q->where('addon', false)->where('quantity', '>', 0),
                 'stocks.addons.addon' => fn($query) => $query->when(data_get($filter, 'addon_status'),
                     fn($q, $status) => $q->with([
-                        'stock'         => fn($q) => $q->where('addon', false)->where('quantity', '>', 0),
+                        'stock'         => fn($q) => $q->where('addon', true)->where('quantity', '>', 0),
                         'translation'   => fn($q) => $q->where('locale', $this->language)->orWhere('locale', $locale),
                     ])
-                        ->whereHas('stock', fn($q) => $q->where('addon', false)->where('quantity', '>', 0))
+                        ->whereHas('stock', fn($q) => $q->where('addon', true)->where('quantity', '>', 0))
                         ->whereHas('translation', fn($q) => $q->where('locale', $this->language)->orWhere('locale', $locale))
                         ->where('active', true)
                         ->where('status', '=', $status)
@@ -43,11 +43,24 @@ class RestProductRepository extends CoreRepository
                     'bonus_quantity', 'value', 'type', 'status'
                 ]),
                 'stocks.bonus.stock',
+                'stocks.bonus.stock.stockExtras',
                 'stocks.bonus.stock.countable:id,uuid,tax,bar_code,status,active,img,min_qty,max_qty',
                 'stocks.bonus.stock.countable.translation' => fn($q) => $q->select('id', 'product_id', 'title', 'locale'),
                 'stocks.stockExtras.group.translation' => fn($q) => $q->where('locale', $this->language)->orWhere('locale', $locale),
-                'discounts',
+                'discounts' => fn($q) => $q->where('start', '<=', today())->where('end', '>=', today())->where('active', 1),
                 'translation' => fn($q) => $q->where('locale', $this->language)->orWhere('locale', $locale),
+                'shop' => fn($q) => $q->select('id', 'status')
+                    ->when(data_get($filter, 'shop_status'), function ($q, $status) {
+                        $q->where('status', '=', $status);
+                    }
+                    ),
+                'shop.translation' => fn($q) => $q->where('locale', $this->language)
+                    ->select('id', 'locale', 'title', 'shop_id'),
+                'reviews',
+                'translations',
+                'category' => fn($q) => $q->select('id', 'uuid'),
+                'category.translation' => fn($q) => $q->where('locale', $this->language)
+                    ->select('id', 'category_id', 'locale', 'title'),
             ])
             ->whereHas('translation', fn($query) => $query->where('locale', $this->language)->orWhere('locale', $locale))
             ->when(data_get($filter, 'shop_status'), function ($q, $status) {
@@ -79,10 +92,10 @@ class RestProductRepository extends CoreRepository
                         $query->orderBy('created_at');
                         break;
                     case 'best_sale':
-                        $query->withCount('orders')->orderBy('orders_count', 'desc');
+                        $query->withCount('orderDetails')->orderBy('order_details_count', 'desc');
                         break;
                     case 'low_sale':
-                        $query->withCount('orders')->orderBy('orders_count');
+                        $query->withCount('orderDetails')->orderBy('order_details_count');
                         break;
                     case 'high_rating':
                         $query->orderBy('reviews_avg_rating', 'desc');
@@ -92,7 +105,9 @@ class RestProductRepository extends CoreRepository
                         break;
                     case 'trust_you':
                         $ids = implode(', ', array_keys(Cache::get('shop-recommended-ids', [])));
-                        $query->orderByRaw(DB::raw("FIELD(id, $ids) ASC"));
+                        if (!empty($ids)) {
+                            $query->orderByRaw(DB::raw("FIELD(id, $ids) ASC"));
+                        }
                         break;
                 }
 
@@ -140,7 +155,7 @@ class RestProductRepository extends CoreRepository
 
         return $this->model()
             ->with([
-                'discounts',
+                'discounts' => fn($q) => $q->where('start', '<=', today())->where('end', '>=', today())->where('active', 1),
                 'stocks' => fn($q) => $q->where('quantity', '>', 0),
                 'stocks.stockExtras.group.translation' => fn($q) => $q->where('locale', $this->language),
                 'translation' => fn($q) => $q->where('locale', $this->language)
@@ -176,7 +191,9 @@ class RestProductRepository extends CoreRepository
         $locale  = data_get(Language::languagesList()->where('default', 1)->first(), 'locale');
 
         return $product
-            ->whereHas('translation', fn($q) => $q->where('locale', $this->language))
+            ->whereHas('translation',
+                fn($q) => $q->where('locale', $this->language)->orWhere('locale', $locale)
+            )
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
             ->with([
@@ -211,6 +228,7 @@ class RestProductRepository extends CoreRepository
                     ->where('status', Product::PUBLISHED),
                 'discounts',
                 'translation' => fn($q) => $q->where('locale', $this->language)->orWhere('locale', $locale),
+                'translations',
             ])
             ->where('active', true)
             ->where('addon', false)

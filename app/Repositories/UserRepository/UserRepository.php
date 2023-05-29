@@ -25,9 +25,16 @@ class UserRepository extends CoreRepository
      */
     public function userById(int $id): ?User
     {
-        /** @var User $user */
         $user = $this->model()
-            ->with('wallet', 'shop', 'point', 'emailSubscription', 'notifications', 'assignReviews')
+            ->with([
+                'wallet',
+                'shop',
+                'point',
+                'emailSubscription',
+                'notifications',
+                'assignReviews',
+                'addresses'
+            ])
             ->withCount([
                 'orders' => fn($q) => $q->where('status', Order::STATUS_DELIVERED)
             ])
@@ -41,6 +48,7 @@ class UserRepository extends CoreRepository
             return $user;
         }
 
+        /** @var User $user */
         $referralActive = (int)Settings::adminSettings()->where('key', 'referral_active')->first()?->value;
 
         if ($referralActive) {
@@ -86,6 +94,7 @@ class UserRepository extends CoreRepository
             'shop.translation' => fn($q) => $q->where('locale', $this->language),
             'wallet',
             'point',
+            'addresses',
             'deliveryManSetting',
             'invitations.shop:id',
             'invitations.shop.translation' => fn($q) => $q->select(['id', 'shop_id', 'locale', 'title'])
@@ -115,14 +124,14 @@ class UserRepository extends CoreRepository
                 'invitations.shop.translation' => fn($q) => $q->select(['id', 'shop_id', 'locale', 'title'])
                                                               ->where('locale', $this->language),
                 'deliveryManSetting',
-                'roles' => fn($q)  => $q->when(data_get($filter, 'role'), function ($q, $role) use($filter) {
+                'roles' => fn($q)  => $q->when(data_get($filter, 'role'), function ($q, $role) {
                     $q->where('name', $role);
                 })
         ])
             ->paginate(data_get($filter, 'perPage', 10));
     }
 
-    public function usersSearch(array $filter): array|Collection|\Illuminate\Support\Collection
+    public function usersSearch(array $filter): LengthAwarePaginator
     {
         /** @var User $users */
         $users = $this->model();
@@ -134,9 +143,8 @@ class UserRepository extends CoreRepository
                     $q->whereIn('name', is_array($roles) ? $roles : [$roles]);
                 })
             ])
-            ->latest()
-            ->take(10)
-            ->get();
+            ->orderBy(data_get($filter,'column','id'), data_get($filter,'sort','desc'))
+            ->paginate(data_get($filter, 'perPage', 10));
     }
 
     /**

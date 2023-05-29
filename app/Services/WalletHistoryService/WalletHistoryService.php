@@ -20,12 +20,6 @@ class WalletHistoryService extends CoreService
     {
         if (!data_get($data, 'type') || !data_get($data, 'price') || !data_get($data, 'user')
         ) {
-            Log::error('wallet history empty', [
-                'type'  => data_get($data, 'type'),
-                'price' => data_get($data, 'price'),
-                'user'  => data_get($data, 'user'),
-                'data'  => $data
-            ]);
             return [
                 'status'  => false,
                 'code'    => ResponseError::ERROR_502,

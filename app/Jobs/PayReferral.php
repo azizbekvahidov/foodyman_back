@@ -48,8 +48,8 @@ class PayReferral implements ShouldQueue
         }
 
         $referral = Referral::where('expired_at', '>=', now())->first();
-        $priceFrom = $referral->price_from;
-        $priceTo   = $referral->price_to;
+        $priceFrom = $referral?->price_from;
+        $priceTo   = $referral?->price_to;
 
         if (!empty($this->user?->referral) &&
             $this->user->orders?->where('status', Order::STATUS_DELIVERED)?->count() === 1

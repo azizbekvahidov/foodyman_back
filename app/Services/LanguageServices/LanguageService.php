@@ -146,10 +146,10 @@ class LanguageService extends CoreService implements LanguageServiceInterface
      * Set Default status of Model
      * @param int|null $id
      * @param int|null $default
-     * @param null $user
+     * @param int|null $user
      * @return array
      */
-    public function setDefault(int $id = null, int $default = null, $user = null): array
+    public function setDefault(?int $id = null, ?int $default = null, ?int $user = null): array
     {
         $model = $this->model()->orderByDesc('id')
             ->when(isset($user), function ($q) use($user) {

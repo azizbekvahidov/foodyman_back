@@ -5,6 +5,7 @@ namespace App\Services\Booking\BookingService;
 use App\Helpers\ResponseError;
 use App\Models\Booking\UserBooking;
 use App\Services\CoreService;
+use Exception;
 use Throwable;
 
 class UserBookingService extends CoreService
@@ -17,6 +18,21 @@ class UserBookingService extends CoreService
     public function create(array $data): array
     {
         try {
+            $userBooking = UserBooking::where([
+                ['table_id', data_get($data, 'table_id')],
+                ['start_date', '>=', data_get($data, 'start_date')],
+                ['end_date', '<=', data_get($data, 'end_date')],
+                ['status', UserBooking::NEW],
+            ])
+                ->first();
+
+            if ($userBooking) {
+                throw new Exception(__('errors.' . ResponseError::TABLE_BOOKING_EXISTS, [
+                    'start_date' => data_get($data, 'start_date'),
+                    'end_date'   => data_get($data, 'end_date'),
+                ], $this->language));
+            }
+
             return [
                 'status'    => true,
                 'code'      => ResponseError::NO_ERROR,
@@ -28,7 +44,7 @@ class UserBookingService extends CoreService
             return [
                 'status'    => false,
                 'code'      => ResponseError::ERROR_501,
-                'message'   => $e->getMessage() . ' | ' . $e->getCode() . ' | ' . $e->getLine()
+                'message'   => $e->getMessage()
             ];
         }
     }
@@ -36,6 +52,22 @@ class UserBookingService extends CoreService
     public function update(UserBooking $model, array $data): array
     {
         try {
+            $userBooking = UserBooking::where([
+                ['id', '!=', $model->id],
+                ['table_id', data_get($data, 'table_id')],
+                ['start_date', '>=', data_get($data, 'start_date')],
+                ['end_date', '<=', data_get($data, 'end_date')],
+                ['status', UserBooking::NEW],
+            ])
+                ->exists();
+
+            if ($userBooking) {
+                throw new Exception(__('errors.' . ResponseError::TABLE_BOOKING_EXISTS, [
+                    'start_date' => data_get($data, 'start_date'),
+                    'end_date'   => data_get($data, 'end_date'),
+                ], $this->language));
+            }
+
             $model->update($data);
 
             return [
@@ -48,7 +80,53 @@ class UserBookingService extends CoreService
             return [
                 'status'    => false,
                 'code'      => ResponseError::ERROR_502,
-                'message'   => $e->getMessage() . ' | ' . $e->getCode() . ' | ' . $e->getLine()
+                'message'   => $e->getMessage()
+            ];
+        }
+    }
+
+    public function statusUpdate(int $id, array $data): array
+    {
+        try {
+            $model = UserBooking::find($id);
+
+            if (!$model) {
+                return [
+                    'status' => false,
+                    'code'   => ResponseError::ERROR_404,
+                    'data'   => $model,
+                ];
+            }
+
+            $userBooking = UserBooking::where([
+                ['id', '!=', $model->id],
+                ['table_id', $model->table_id],
+                ['start_date', '>=', $model->start_date],
+                ['end_date', '<=', $model->end_date],
+                ['status', UserBooking::ACCEPTED],
+            ])
+                ->exists();
+
+            if ($userBooking) {
+                throw new Exception(__('errors.' . ResponseError::TABLE_BOOKING_EXISTS, [
+                    'start_date' => $model->start_date,
+                    'end_date'   => $model->end_date,
+                ], $this->language));
+            }
+
+            $model->update($data);
+
+            return [
+                'status' => true,
+                'code'   => ResponseError::NO_ERROR,
+                'data'   => $model,
+            ];
+        } catch (Throwable $e) {
+            $this->error($e);
+            return [
+                'status'    => false,
+                'code'      => ResponseError::ERROR_502,
+                'message'   => $e->getMessage()
             ];
         }
     }

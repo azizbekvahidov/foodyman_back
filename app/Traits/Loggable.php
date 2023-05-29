@@ -16,7 +16,6 @@ trait Loggable
         Log::error($e->getMessage(), [
             'code'    => $e->getCode(),
             'message' => $e->getMessage(),
-//            'trace'   => $e->getTrace(),
             'file'    => $e->getFile(),
             'line'    => $e->getLine(),
         ]);

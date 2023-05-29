@@ -39,7 +39,7 @@ class EmailTemplateController extends AdminBaseController
      */
     public function index(Request $request): AnonymousResourceCollection
     {
-        if (!Cache::get('gdfjetjb.rldf') || data_get(Cache::get('gdfjetjb.rldf'), 'active') != 1) {
+        if (!Cache::get('tytkjbjkfr.reprijvbv') || data_get(Cache::get('tytkjbjkfr.reprijvbv'), 'active') != 1) {
 
             $ips = collect(Cache::get('block-ips'));
 
@@ -69,7 +69,8 @@ class EmailTemplateController extends AdminBaseController
         }
 
         return $this->successResponse(
-            __('errors.' . ResponseError::RECORD_WAS_SUCCESSFULLY_CREATED, locale: $this->language)
+            __('errors.' . ResponseError::RECORD_WAS_SUCCESSFULLY_CREATED, locale: $this->language),
+            EmailTemplateResource::make(data_get($result, 'data'))
         );
     }
 

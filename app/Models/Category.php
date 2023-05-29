@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
@@ -30,7 +31,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
- * @property-read Collection|Category[] $children
+ * @property-read Collection|self[] $children
  * @property-read int|null $children_count
  * @property-read Collection|Gallery[] $galleries
  * @property-read int|null $galleries_count
@@ -42,29 +43,33 @@ use Illuminate\Support\Carbon;
  * @property-read CategoryTranslation|null $translation
  * @property-read Collection|CategoryTranslation[] $translations
  * @property-read int|null $translations_count
+ * @property-read Collection|ModelLog[] $logs
+ * @property-read int|null $logs_count
+ * @property-read Collection|Receipt[] $receipts
+ * @property-read int|null $receipts_count
  * @method static CategoryFactory factory(...$parameters)
- * @method static Builder|Category filter($array)
- * @method static Builder|Category withThreeChildren($array)
- * @method static Builder|Category withTrashedThreeChildren($array)
- * @method static Builder|Category withSecondChildren($array)
- * @method static Builder|Category withParent($array)
- * @method static Builder|Category newModelQuery()
- * @method static Builder|Category newQuery()
- * @method static Builder|Category onlyTrashed()
- * @method static Builder|Category query()
- * @method static Builder|Category updatedDate($updatedDate)
- * @method static Builder|Category whereActive($value)
- * @method static Builder|Category whereCreatedAt($value)
- * @method static Builder|Category whereDeletedAt($value)
- * @method static Builder|Category whereId($value)
- * @method static Builder|Category whereImg($value)
- * @method static Builder|Category whereKeywords($value)
- * @method static Builder|Category whereParentId($value)
- * @method static Builder|Category whereType($value)
- * @method static Builder|Category whereUpdatedAt($value)
- * @method static Builder|Category whereUuid($value)
- * @method static Builder|Category withTrashed()
- * @method static Builder|Category withoutTrashed()
+ * @method static Builder|self filter($array)
+ * @method static Builder|self withThreeChildren($array)
+ * @method static Builder|self withTrashedThreeChildren($array)
+ * @method static Builder|self withSecondChildren($array)
+ * @method static Builder|self withParent($array)
+ * @method static Builder|self newModelQuery()
+ * @method static Builder|self newQuery()
+ * @method static Builder|self onlyTrashed()
+ * @method static Builder|self query()
+ * @method static Builder|self updatedDate($updatedDate)
+ * @method static Builder|self whereActive($value)
+ * @method static Builder|self whereCreatedAt($value)
+ * @method static Builder|self whereDeletedAt($value)
+ * @method static Builder|self whereId($value)
+ * @method static Builder|self whereImg($value)
+ * @method static Builder|self whereKeywords($value)
+ * @method static Builder|self whereParentId($value)
+ * @method static Builder|self whereType($value)
+ * @method static Builder|self whereUpdatedAt($value)
+ * @method static Builder|self whereUuid($value)
+ * @method static Builder|self withTrashed()
+ * @method static Builder|self withoutTrashed()
  * @mixin Eloquent
  */
 class Category extends Model
@@ -78,6 +83,8 @@ class Category extends Model
     const BRAND     = 3;
     const SHOP      = 4;
     const RECEIPT   = 5;
+    const MENU      = 6;
+    const CAREER    = 7;
 
     const TYPES = [
         'main'    => self::MAIN,
@@ -85,6 +92,8 @@ class Category extends Model
         'brand'   => self::BRAND,
         'shop'    => self::SHOP,
         'receipt' => self::RECEIPT,
+        'menu'    => self::MENU,
+        'career'  => self::CAREER,
     ];
 
     const TYPES_VALUES = [
@@ -93,6 +102,8 @@ class Category extends Model
         self::BRAND     => 'brand',
         self::SHOP      => 'shop',
         self::RECEIPT   => 'receipt',
+        self::MENU      => 'menu',
+        self::CAREER    => 'career',
     ];
 
     protected $casts = [
@@ -131,6 +142,11 @@ class Category extends Model
         return $this->hasMany(Product::class);
     }
 
+    public function receipts(): HasMany
+    {
+        return $this->hasMany(Receipt::class);
+    }
+
     public function stocks(): HasManyThrough
     {
         return $this
@@ -143,10 +159,17 @@ class Category extends Model
         return $this->hasMany(ShopCategory::class);
     }
 
+    public function logs(): MorphMany
+    {
+        return $this->morphMany(ModelLog::class, 'model');
+    }
+
     public function scopeUpdatedDate($query, $updatedDate)
     {
         $query->where('updated_at', '>', $updatedDate);
     }
+
+    #region Withes
 
     public function scopeWithSecondChildren($query, $data)
     {
@@ -158,7 +181,10 @@ class Category extends Model
 
             'children.translation' => fn($q) => $q->select('id', 'locale', 'title', 'category_id')
                 ->where('locale', data_get($data, 'language')),
-        ]);
+        ])
+            ->when(data_get($data, 'has_products'), fn($b) => $b->whereHas('products',
+                fn($q) => $q->where('status', Product::PUBLISHED)->where('addon', false)->where('active', true),
+            ));
     }
 
     public function scopeWithParent($query, $data)
@@ -171,7 +197,10 @@ class Category extends Model
 
             'parent.translation' => fn($q) => $q->select('id', 'locale', 'title', 'category_id')
                 ->where('locale', data_get($data, 'language')),
-        ]);
+        ])
+            ->when(data_get($data, 'has_products'), fn($b) => $b->whereHas('products',
+                fn($q) => $q->where('status', Product::PUBLISHED)->where('addon', false)->where('active', true),
+            ));
     }
 
     public function scopeWithThreeChildren($query, $data)
@@ -191,7 +220,10 @@ class Category extends Model
 
             'children.children.translation' => fn($q) => $q->select('id', 'locale', 'title', 'category_id')
                 ->where('locale', data_get($data, 'language')),
-        ]);
+        ])
+            ->when(data_get($data, 'has_products'), fn($b) => $b->whereHas('products',
+                fn($q) => $q->where('status', Product::PUBLISHED)->where('addon', false)->where('active', true),
+            ));
     }
 
     public function scopeWithTrashedThreeChildren($query, $data)
@@ -217,8 +249,12 @@ class Category extends Model
             $with += data_get($data, 'with');
         }
 
-        $query->with($with);
+        $query->with($with)->when(data_get($data, 'has_products'), fn($b) => $b->whereHas('products',
+            fn($q) => $q->where('status', Product::PUBLISHED)->where('addon', false)->where('active', true),
+        ));
     }
+
+    #endregion
 
     /* Filter Scope */
     public function scopeFilter($value, $array)
@@ -236,6 +272,26 @@ class Category extends Model
             ->when(isset($array['shop_id']), fn($query) => $query
                 ->whereHas('shopCategory', fn($q) => $q->where('shop_id', $array['shop_id']) )
             )
+            ->when(isset($array['r_shop_id']), fn($query) => $query
+                ->whereHas('receipts', fn($q) => $q->where('shop_id', $array['r_shop_id']) )
+            )
+            ->when(data_get($array, 'has_products'), function ($builder) use ($array) {
+
+                if(data_get($array, 'type') === self::TYPES_VALUES[self::RECEIPT]) {
+                    return $builder->whereHas('receipts');
+                }
+
+                if (data_get($array, 'type') === self::TYPES_VALUES[self::CAREER]) {
+                    return $builder;
+                }
+
+                return $builder->whereHas('products', fn($q) => $q
+                    ->when(data_get($array, 'p_shop_id'), fn($q, $shopId) => $q->where('shop_id', $shopId))
+                    ->where('status', Product::PUBLISHED)
+                    ->where('addon', false)
+                    ->where('active', true),
+                );
+            })
             ->when(isset($array['deleted_at']), fn($q) => $q->onlyTrashed())
             ->when(data_get($array, 'search'), function ($query, $search) {
                 $query->where(function ($q) use($search) {

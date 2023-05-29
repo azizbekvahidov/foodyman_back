@@ -64,7 +64,7 @@ class PayTabsController extends Controller
         if (empty($shop)) {
             return $this->onErrorResponse([
                 'code'    => ResponseError::ERROR_404,
-                'message' => __('errors.' . ResponseError::SHOP_NOT_FOUND)
+                'message' => __('errors.' . ResponseError::SHOP_NOT_FOUND, locale: $this->language)
             ]);
         }
 

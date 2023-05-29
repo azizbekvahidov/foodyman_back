@@ -120,6 +120,10 @@ return [
     $e::ATTACH_FOR_ADDON                => 'Нельзя прикреплять товары для аддона',
     $e::TYPE_PRICE_USER                 => 'Тип, цена или пользователь пусты',
     $e::NOTHING_TO_UPDATE               => 'Нечего обновлять',
+    $e::WAITER_NOT_EMPTY                => 'Официант уже закреплён',
+    $e::EMPTY                           => 'Не указано',
 
     $e::ORDER_OR_DELIVERYMAN_IS_EMPTY   => 'Заказ не найден или курьер не прикреплен',
+    $e::TABLE_BOOKING_EXISTS            => 'У этого стола уже есть бронь. От :start_date до :end_date',
+    $e::DELIVERYMAN_SETTING_EMPTY       => 'У вас не заданы настройки',
 ];

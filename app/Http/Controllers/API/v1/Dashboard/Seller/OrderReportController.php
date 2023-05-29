@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\v1\Dashboard\Seller;
 
+use App\Helpers\ResponseError;
 use App\Http\Requests\FilterParamsRequest;
 use App\Http\Requests\Order\SellerOrderReportRequest;
 use App\Http\Resources\SellerOrderReportResource;
@@ -13,12 +14,7 @@ class OrderReportController extends SellerBaseController
 {
     use Notification;
 
-    /**
-     * @param SellerOrderReportRepository $repository
-     */
-    public function __construct(
-        private SellerOrderReportRepository $repository
-    )
+    public function __construct(private SellerOrderReportRepository $repository)
     {
         parent::__construct();
     }

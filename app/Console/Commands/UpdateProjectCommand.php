@@ -39,7 +39,7 @@ class UpdateProjectCommand extends Command
     public function handle()
     {
         // 1. Unzip updated project
-        $process = Process::fromShellCommandline("cd ". base_path() . " && unzip -o foodyman.zip");
+        $process = Process::fromShellCommandline("cd ". base_path() . " && unzip -o foodyman.zip -x .env config/credential.php config/init.php storage/app/*");
         $process->run();
 
         if (!$process->isSuccessful()) {

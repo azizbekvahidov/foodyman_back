@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Booking\Booking;
 
 use App\Http\Requests\BaseRequest;
+use App\Models\Booking\UserBooking;
 use Illuminate\Validation\Rule;
 
 class UserBookingStoreRequest extends BaseRequest
@@ -24,7 +25,8 @@ class UserBookingStoreRequest extends BaseRequest
                 Rule::exists('bookings', 'id')->whereNull('deleted_at')
             ],
             'start_date' => 'date|date_format:Y-m-d H:i',
-            'end_date'   => 'date|date_format:Y-m-d H:i'
+            'end_date'   => 'date|date_format:Y-m-d H:i',
+            'status' => Rule::in(UserBooking::STATUSES),
         ];
     }
 }

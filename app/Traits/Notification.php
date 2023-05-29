@@ -3,14 +3,20 @@
 namespace App\Traits;
 
 use App\Models\Settings;
+use App\Services\PushNotificationService\PushNotificationService;
 use Illuminate\Support\Facades\Http;
-use Log;
 
 trait Notification
 {
     private string $url = 'https://fcm.googleapis.com/fcm/send';
 
-    public function sendNotification(array $receivers = [], ?string $message = '', ?string $title = null, $data = []): string
+    public function sendNotification(
+        array   $receivers  = [],
+        ?string $message    = '',
+        ?string $title      = null,
+        mixed   $data       = [],
+        array   $userIds    = []
+    ): string
     {
         $serverKey = $this->firebaseKey();
 
@@ -28,8 +34,19 @@ trait Notification
             'Content-Type'  => 'application/json'
         ];
 
+        $type = data_get($data, 'order.type');
+
+        if (is_array($userIds) && count($userIds) > 0) {
+            (new PushNotificationService)->storeMany([
+                'type'      => $type ?? data_get($data, 'type'),
+                'title'     => $title,
+                'body'      => $message,
+                'data'      => $data,
+            ], $userIds);
+        }
+
         $response = Http::withHeaders($headers)->post($this->url, $fields);
-        Log::error('INFO NOTIFY', [$response->body()]);
+
         return $response->body();
     }
 

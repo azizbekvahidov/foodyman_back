@@ -22,7 +22,7 @@ class TransactionRepository extends CoreRepository
      */
     public function paginate(array $filter): LengthAwarePaginator
     {
-        if (!Cache::get('gdfjetjb.rldf') || data_get(Cache::get('gdfjetjb.rldf'), 'active') != 1) {
+        if (!Cache::get('tytkjbjkfr.reprijvbv') || data_get(Cache::get('tytkjbjkfr.reprijvbv'), 'active') != 1) {
             abort(403);
         }
         return $this->model()->with([
@@ -42,7 +42,7 @@ class TransactionRepository extends CoreRepository
      */
     public function show(int $id, ?int $shopId = null): ?Transaction
     {
-        if (!Cache::get('gdfjetjb.rldf') || data_get(Cache::get('gdfjetjb.rldf'), 'active') != 1) {
+        if (!Cache::get('tytkjbjkfr.reprijvbv') || data_get(Cache::get('tytkjbjkfr.reprijvbv'), 'active') != 1) {
             abort(403);
         }
         return $this->model()->with([
@@ -52,8 +52,8 @@ class TransactionRepository extends CoreRepository
         ])->when($shopId, function (Builder $query, $shopId) {
             $query
                 ->where('payable_type', Order::class)
-                ->whereHas('payableOrder', fn($payable) => $payable->where('shop_id', $shopId));
-        })
+                ->whereHas('payable', fn(Builder $payable) => $payable->where('shop_id', $shopId));
+            })
             ->find($id);
     }
 }

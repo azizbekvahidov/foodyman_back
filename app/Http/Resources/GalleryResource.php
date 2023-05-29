@@ -24,7 +24,6 @@ class GalleryResource extends JsonResource
             'loadable_type' => $this->when($this->loadable_type, (string) $this->loadable_type),
             'loadable_id'   => $this->when($this->loadable_id, (int) $this->loadable_id),
             'path'          => (string) $this->path,
-            'isset'         => $this->when($this->isset, (bool) $this->isset) ?? false,
             'loadable'      => $this->whenLoaded('loadable'),
             'base_path'     => request()->getHttpHost() . '/storage/images/',
         ];

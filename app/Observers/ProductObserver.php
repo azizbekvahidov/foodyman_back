@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\Product;
 use App\Services\DeletingService\DeletingService;
+use App\Services\ModelLogService\ModelLogService;
 use App\Traits\Loggable;
 use Cache;
 use Illuminate\Support\Str;
@@ -20,27 +21,32 @@ class ProductObserver
     public function creating(Product $product): void
     {
         $product->uuid = Str::uuid();
-
     }
 
     /**
      * Handle the Product "created" event.
      *
+     * @param Product $product
      * @return void
      */
-    public function created(): void
+    public function created(Product $product): void
     {
         Cache::flush();
+
+        (new ModelLogService)->logging($product, $product->getAttributes(), 'created');
     }
 
     /**
      * Handle the Product "updated" event.
      *
+     * @param Product $product
      * @return void
      */
-    public function updated(): void
+    public function updated(Product $product): void
     {
         Cache::flush();
+
+        (new ModelLogService)->logging($product, $product->getAttributes(), 'updated');
     }
 
     /**
@@ -53,6 +59,8 @@ class ProductObserver
     {
         (new DeletingService)->product($product);
         Cache::flush();
+
+        (new ModelLogService)->logging($product, $product->getAttributes(), 'deleted');
     }
 
     /**
@@ -63,7 +71,7 @@ class ProductObserver
      */
     public function restored(Product $product): void
     {
-        //
+        (new ModelLogService)->logging($product, $product->getAttributes(), 'restored');
     }
 
 }

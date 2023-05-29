@@ -13,9 +13,12 @@ use App\Http\Resources\NotificationResource;
 use App\Http\Resources\UserResource;
 use App\Models\Banner;
 use App\Models\Like;
+use App\Models\PushNotification;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Repositories\UserRepository\UserRepository;
 use App\Services\UserServices\UserService;
+use DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -105,7 +108,6 @@ class ProfileController extends UserBaseController
      */
     public function delete(): JsonResponse
     {
-        /** @var User $user */
         $user = $this->userRepository->userByUUID(auth('sanctum')->user()->uuid);
 
         if (empty($user)) {
@@ -115,6 +117,7 @@ class ProfileController extends UserBaseController
             ]);
         }
 
+        /** @var User $user */
         if ($user->hasRole('user')) {
             $user->paymentProcess()->forceDelete();
             $user->transactions()->forceDelete();
@@ -210,6 +213,30 @@ class ProfileController extends UserBaseController
             __('errors.' . ResponseError::SUCCESS, locale: $this->language),
             BannerResource::collection($looks)
         );
+    }
+
+    public function notificationStatistic(): array
+    {
+        $notification = DB::table('push_notifications')
+            ->select([
+                DB::raw('count(id) as count')
+            ])
+            ->whereNull('read_at')
+            ->where('user_id', auth('sanctum')->id())
+            ->first();
+
+        $transaction = DB::table('transactions')
+            ->select([
+                DB::raw('count(id) as count')
+            ])
+            ->where('status', Transaction::STATUS_PROGRESS)
+            ->where('user_id', auth('sanctum')->id())
+            ->first();
+
+        return [
+            'notification' => $notification?->count,
+            'transaction'  => $transaction?->count
+        ];
     }
 
     public function notifications(): AnonymousResourceCollection

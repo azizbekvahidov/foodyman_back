@@ -5,6 +5,8 @@ namespace App\Http\Controllers\API\v1\Dashboard\Seller;
 use App\Exports\OrderExport;
 use App\Helpers\ResponseError;
 use App\Http\Requests\FilterParamsRequest;
+use App\Http\Requests\Order\CookUpdateRequest;
+use App\Http\Requests\Order\WaiterUpdateRequest;
 use App\Http\Requests\Order\DeliveryManUpdateRequest;
 use App\Http\Requests\Order\StocksCalculateRequest;
 use App\Http\Requests\Order\StoreRequest;
@@ -49,7 +51,7 @@ class OrderController extends SellerBaseController
         $filter = $request->merge(['shop_id' => $this->shop->id])->all();
 
         $orders = $this->adminRepository->ordersPaginate($filter);
-        $filter['date_from'] = date('Y-m-d H:i:s', strtotime('-1 minute'));
+//        $filter['date_from'] = date('Y-m-d H:i:s', strtotime('-1 minute'));
         $statistic = (new DashboardRepository)->orderByStatusStatistics($filter);
 
         $lastPage = (new DashboardRepository)->getLastPage(
@@ -89,11 +91,14 @@ class OrderController extends SellerBaseController
             return $this->onErrorResponse($result);
         }
 
+        $tokens = $this->tokens();
+
         $this->sendNotification(
-            $this->tokens(),
+            data_get($tokens, 'tokens'),
             "New order was created",
             data_get($result, 'data.id', ''),
-            data_get($result, 'data')?->setAttribute('type', 'new_order')?->only(['id', 'status'])
+            data_get($result, 'data')?->setAttribute('type', 'new_order')?->only(['id', 'status']),
+            data_get($tokens, 'ids', [])
         );
 
         return $this->successResponse(
@@ -109,7 +114,7 @@ class OrderController extends SellerBaseController
         ])
             ->whereHas('roles', fn($q) => $q->where('name', 'admin') )
             ->whereNotNull('firebase_token')
-            ->pluck('firebase_token')
+            ->pluck('firebase_token', 'id')
             ->toArray();
 
         $aTokens = [];
@@ -118,7 +123,10 @@ class OrderController extends SellerBaseController
             $aTokens = array_merge($aTokens, is_array($adminToken) ? array_values($adminToken) : [$adminToken]);
         }
 
-        return array_values(array_unique($aTokens));
+        return [
+            'tokens' => array_values(array_unique($aTokens)),
+            'ids'    => array_keys($admins)
+        ];
     }
 
     /**
@@ -178,6 +186,8 @@ class OrderController extends SellerBaseController
         $order = Order::with([
             'shop.seller',
             'deliveryMan',
+            'waiter',
+            'cook',
             'user.wallet',
         ])
             ->where('shop_id', $this->shop->id)
@@ -212,6 +222,48 @@ class OrderController extends SellerBaseController
     public function orderDeliverymanUpdate(int $orderId, DeliveryManUpdateRequest $request): JsonResponse
     {
         $result = $this->orderService->updateDeliveryMan($orderId, $request->input('deliveryman'), $this->shop->id);
+
+        if (!data_get($result, 'status')) {
+            return $this->onErrorResponse($result);
+        }
+
+        return $this->successResponse(
+            __('errors.' . ResponseError::RECORD_WAS_SUCCESSFULLY_UPDATED, locale: $this->language),
+            $this->orderRepository->reDataOrder(data_get($result, 'data')),
+        );
+    }
+
+    /**
+     * Update Order Waiter Update.
+     *
+     * @param int $orderId
+     * @param WaiterUpdateRequest $request
+     * @return JsonResponse
+     */
+    public function orderWaiterUpdate(int $orderId, WaiterUpdateRequest $request): JsonResponse
+    {
+        $result = $this->orderService->updateWaiter($orderId, $request->input('waiter_id'), $this->shop->id);
+
+        if (!data_get($result, 'status')) {
+            return $this->onErrorResponse($result);
+        }
+
+        return $this->successResponse(
+            __('errors.' . ResponseError::RECORD_WAS_SUCCESSFULLY_UPDATED, locale: $this->language),
+            $this->orderRepository->reDataOrder(data_get($result, 'data')),
+        );
+    }
+
+    /**
+     * Update Order Cook Update.
+     *
+     * @param int $orderId
+     * @param CookUpdateRequest $request
+     * @return JsonResponse
+     */
+    public function orderCookUpdate(int $orderId, CookUpdateRequest $request): JsonResponse
+    {
+        $result = $this->orderService->updateCook($orderId, $request->input('cook_id'));
 
         if (!data_get($result, 'status')) {
             return $this->onErrorResponse($result);
@@ -288,7 +340,7 @@ class OrderController extends SellerBaseController
             $this->error($e);
             return $this->errorResponse(
                 ResponseError::ERROR_508,
-                'Excel format incorrect or data invalid'
+                __('errors.' . ResponseError::ERROR_508, locale: $this->language) . ' | ' . $e->getMessage()
             );
         }
     }

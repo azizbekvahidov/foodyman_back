@@ -54,13 +54,6 @@ class TermsController extends AdminBaseController
     {
         $termCondition = TermCondition::with('translations')->first();
 
-        if (empty($termCondition)) {
-            return $this->onErrorResponse([
-                'code'      => ResponseError::ERROR_404,
-                'message'   => __('errors.' . ResponseError::ERROR_404, locale: $this->language)
-            ]);
-        }
-
         return $this->successResponse(
             __('errors.' . ResponseError::SUCCESS, locale: $this->language),
             $termCondition

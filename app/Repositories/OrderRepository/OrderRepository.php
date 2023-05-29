@@ -268,13 +268,12 @@ class OrderRepository extends CoreRepository implements OrderRepoInterface
         $km          = 0;
         $deliveryFee = 0;
 
-        /** @var Shop $shop */
         $shop = Shop::with([
             'translation' => fn($q) => $q->where('locale', $this->language)
         ])->find((int)data_get($filter, 'shop_id'));
 
         if (!empty($shop)) {
-
+            /** @var Shop $shop */
             $shopTax     = max((($totalPrice / $this->currency()) / 100 * $shop->tax) * $this->currency(), 0);
 
             $helper      = new Utility;
@@ -332,6 +331,7 @@ class OrderRepository extends CoreRepository implements OrderRepoInterface
                 'review',
                 'pointHistories',
                 'currency' => fn($q) => $q->select('id', 'title', 'symbol'),
+                'deliveryMan' => fn($q) => $q->withAvg('assignReviews', 'rating'),
                 'deliveryMan.deliveryManSetting',
                 'coupon',
                 'shop:id,location,tax,price,price_per_km,background_img,logo_img,uuid,phone',
@@ -345,6 +345,7 @@ class OrderRepository extends CoreRepository implements OrderRepoInterface
                 'orderRefunds',
                 'transaction.paymentSystem',
                 'galleries',
+                'myAddress',
             ])
             ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
             ->find($id);

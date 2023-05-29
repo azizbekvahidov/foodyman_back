@@ -100,7 +100,7 @@ class ProductController extends RestBaseController
             ]);
         }
 
-        $products = $this->productRepository->productsPaginate(
+        $products = $this->restProductRepository->productsPaginate(
             ['shop_id' => $shop->id, 'rest' => true, 'status' => Product::PUBLISHED, 'active' => 1]
         );
 
@@ -109,7 +109,7 @@ class ProductController extends RestBaseController
 
     public function productsByBrand(int $id): AnonymousResourceCollection
     {
-        $products = $this->productRepository->productsPaginate(
+        $products = $this->restProductRepository->productsPaginate(
             ['brand_id' => $id, 'rest' => true, 'status' => Product::PUBLISHED, 'active' => 1]
         );
 
@@ -127,7 +127,7 @@ class ProductController extends RestBaseController
             ]);
         }
 
-        $products = $this->productRepository->productsPaginate(
+        $products = $this->restProductRepository->productsPaginate(
             ['category_id' => $category->id, 'rest' => true, 'status' => Product::PUBLISHED, 'active' => 1]
         );
 

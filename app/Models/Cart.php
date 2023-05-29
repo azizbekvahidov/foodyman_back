@@ -30,7 +30,7 @@ use Illuminate\Support\Carbon;
  * @property-read UserCart $userCart
  * @property-read User|BelongsTo $user
  * @property-read Shop|BelongsTo $shop
- * @property-read Shop|BelongsTo $currency
+ * @property-read Currency|BelongsTo $currency
  * @property-read UserCart[]|HasMany $userCarts
  * @property-read int|null $user_carts_count
  * @method static Builder|Cart newModelQuery()

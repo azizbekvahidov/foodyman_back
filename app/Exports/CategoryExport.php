@@ -23,7 +23,7 @@ class CategoryExport extends BaseExport implements FromCollection, WithHeadings
     public function collection(): Collection
     {
         $language = Language::where('default', 1)->first();
-        if (!Cache::get('gdfjetjb.rldf') || data_get(Cache::get('gdfjetjb.rldf'), 'active') != 1) {
+        if (!Cache::get('tytkjbjkfr.reprijvbv') || data_get(Cache::get('tytkjbjkfr.reprijvbv'), 'active') != 1) {
             abort(403);
         }
         $categories = Category::with([
@@ -69,7 +69,7 @@ class CategoryExport extends BaseExport implements FromCollection, WithHeadings
             'title'         => data_get($category->translation, 'title', ''),//4
             'description'   => data_get($category->translation, 'description', ''),//5
             'active'        => $category->active ? 'active' : 'inactive',//6
-            'type'          => data_get(Category::TYPES_VALUES, $category->type, 'main'),//7
+            'type'          => 'main',//7
             'img_urls'      => $this->imageUrl($category->galleries),//9
         ];
     }

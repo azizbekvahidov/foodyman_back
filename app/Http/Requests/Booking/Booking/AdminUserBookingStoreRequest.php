@@ -16,7 +16,6 @@ class AdminUserBookingStoreRequest extends BaseRequest
     {
         return [
             'user_id' => [
-                'required',
                 Rule::exists('users', 'id')->whereNull('deleted_at')
             ],
         ] + (new UserBookingStoreRequest)->rules();

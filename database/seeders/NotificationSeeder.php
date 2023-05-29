@@ -4,10 +4,14 @@ namespace Database\Seeders;
 
 use App\Models\Notification;
 use App\Models\Order;
+use App\Traits\Loggable;
 use Illuminate\Database\Seeder;
+use Throwable;
 
 class NotificationSeeder extends Seeder
 {
+    use Loggable;
+
     /**
      * Run the database seeds.
      *
@@ -43,7 +47,13 @@ class NotificationSeeder extends Seeder
         ];
 
         foreach ($notifications as $notification) {
-            Notification::create($notification);
+            try {
+                Notification::updateOrCreate([
+                    'type' => data_get($notification, 'type')
+                ], $notification);
+            } catch (Throwable $e) {
+                $this->error($e);
+            }
         }
 
     }

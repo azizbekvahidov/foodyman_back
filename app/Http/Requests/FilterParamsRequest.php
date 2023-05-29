@@ -29,6 +29,8 @@ class FilterParamsRequest extends BaseRequest
             'note'          => 'string|max:255',
             'date_from'     => 'date_format:Y-m-d',
             'date_to'       => 'date_format:Y-m-d',
+            'free_from'     => 'date_format:Y-m-d H:i',
+            'free_to'       => 'date_format:Y-m-d H:i',
             'ids'           => 'array',
             'active'        => 'boolean',
         ];

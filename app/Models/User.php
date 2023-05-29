@@ -10,6 +10,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
@@ -52,6 +53,10 @@ use Spatie\Permission\Traits\HasRoles;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
+ * @property Carbon|null $language_id
+ * @property Carbon|null $currency_id
+ * @property Language|null $language
+ * @property Currency|null $currency
  * @property-read Collection|Gallery[] $galleries
  * @property-read int|null $galleries_count
  * @property-read mixed $role
@@ -63,6 +68,8 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read Shop|null $moderatorShop
  * @property-read Collection|Review[] $reviews
  * @property-read int|null $reviews_count
+ * @property-read Collection|UserAddress[] $addresses
+ * @property-read int|null $addresses_count
  * @property-read Collection|Review[] $assignReviews
  * @property-read int|null $assign_reviews_count
  * @property-read Collection|Notification[] $notifications
@@ -99,6 +106,10 @@ use Spatie\Permission\Traits\HasRoles;
  * @property static|void $create
  * @property Collection|Activity[] $activities
  * @property int $activities_count
+ * @property-read Collection|ModelLog[] $logs
+ * @property-read int|null $logs_count
+ * @property-read int|null $tg_user_id
+ * @property-read int|null $location
  * @property-read int|null $referral_from_topup_price
  * @property-read int|null $referral_from_withdraw_price
  * @property-read int|null $referral_to_withdraw_price
@@ -108,34 +119,34 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read int|null $referral_to_withdraw_count
  * @property-read int|null $referral_to_topup_count
  * @method static UserFactory factory(...$parameters)
- * @method static Builder|User newModelQuery()
- * @method static Builder|User newQuery()
- * @method static Builder|User onlyTrashed()
- * @method static Builder|User permission($permissions)
- * @method static Builder|User query()
- * @method static Builder|User filter($filter)
- * @method static Builder|User role($roles, $guard = null)
- * @method static Builder|User whereActive($value)
- * @method static Builder|User whereBirthday($value)
- * @method static Builder|User whereCreatedAt($value)
- * @method static Builder|User whereDeletedAt($value)
- * @method static Builder|User whereEmail($value)
- * @method static Builder|User whereEmailVerifiedAt($value)
- * @method static Builder|User whereFirebaseToken($value)
- * @method static Builder|User whereFirstname($value)
- * @method static Builder|User whereGender($value)
- * @method static Builder|User whereId($value)
- * @method static Builder|User whereImg($value)
- * @method static Builder|User whereIpAddress($value)
- * @method static Builder|User whereLastname($value)
- * @method static Builder|User wherePassword($value)
- * @method static Builder|User wherePhone($value)
- * @method static Builder|User wherePhoneVerifiedAt($value)
- * @method static Builder|User whereRememberToken($value)
- * @method static Builder|User whereUpdatedAt($value)
- * @method static Builder|User whereUuid($value)
- * @method static Builder|User withTrashed()
- * @method static Builder|User withoutTrashed()
+ * @method static Builder|self newModelQuery()
+ * @method static Builder|self newQuery()
+ * @method static Builder|self onlyTrashed()
+ * @method static Builder|self permission($permissions)
+ * @method static Builder|self query()
+ * @method static Builder|self filter($filter)
+ * @method static Builder|self role($roles, $guard = null)
+ * @method static Builder|self whereActive($value)
+ * @method static Builder|self whereBirthday($value)
+ * @method static Builder|self whereCreatedAt($value)
+ * @method static Builder|self whereDeletedAt($value)
+ * @method static Builder|self whereEmail($value)
+ * @method static Builder|self whereEmailVerifiedAt($value)
+ * @method static Builder|self whereFirebaseToken($value)
+ * @method static Builder|self whereFirstname($value)
+ * @method static Builder|self whereGender($value)
+ * @method static Builder|self whereId($value)
+ * @method static Builder|self whereImg($value)
+ * @method static Builder|self whereIpAddress($value)
+ * @method static Builder|self whereLastname($value)
+ * @method static Builder|self wherePassword($value)
+ * @method static Builder|self wherePhone($value)
+ * @method static Builder|self wherePhoneVerifiedAt($value)
+ * @method static Builder|self whereRememberToken($value)
+ * @method static Builder|self whereUpdatedAt($value)
+ * @method static Builder|self whereUuid($value)
+ * @method static Builder|self withTrashed()
+ * @method static Builder|self withoutTrashed()
  * @mixin Eloquent
  */
 class User extends Authenticatable implements MustVerifyEmail
@@ -178,6 +189,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'phone_verified_at' => 'datetime:Y-m-d H:i:s',
         'birthday'          => 'datetime:Y-m-d H:i:s',
         'firebase_token'    => 'array',
+        'location'          => 'array',
     ];
 
     public function isOnline(): ?bool
@@ -187,7 +199,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function getRoleAttribute(): string
     {
-        return $this->role = $this->roles[0]->name ?? 'no role';
+        return $this->roles[0]->name ?? 'no role';
     }
 
     public function getNameOrEmailAttribute(): ?string
@@ -223,7 +235,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'user_id', 'id', 'id', 'shop_id');
     }
 
-    public function wallet(): HasOne
+    public function wallet(): HasOne|Wallet
     {
         return $this->hasOne(Wallet::class, 'user_id');
     }
@@ -231,6 +243,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function reviews(): HasMany
     {
         return $this->hasMany(Review::class);
+    }
+
+    public function addresses(): HasMany
+    {
+        return $this->hasMany(UserAddress::class);
     }
 
     public function transactions(): HasMany
@@ -243,7 +260,7 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->morphMany(Review::class, 'assignable');
     }
 
-    public function invitations(): HasMany
+    public function invitations(): HasMany|Invitation
     {
         return $this->hasMany(Invitation::class);
     }
@@ -301,6 +318,21 @@ class User extends Authenticatable implements MustVerifyEmail
     public function activities(): HasMany
     {
         return $this->hasMany(UserActivity::class);
+    }
+
+    public function logs(): MorphMany
+    {
+        return $this->morphMany(ModelLog::class, 'model');
+    }
+
+    public function language(): BelongsTo
+    {
+        return $this->belongsTo(Language::class);
+    }
+
+    public function currency(): BelongsTo
+    {
+        return $this->belongsTo(Currency::class);
     }
 
     public function scopeFilter($query, array $filter) {

@@ -6,6 +6,7 @@ use App\Helpers\ResponseError;
 use App\Http\Requests\CategoryFilterRequest;
 use App\Http\Resources\CategoryResource;
 use App\Models\Category;
+use App\Repositories\CategoryRepository\RestCategoryRepository;
 use App\Repositories\Interfaces\CategoryRepoInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,14 +14,17 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class CategoryController extends RestBaseController
 {
-    public function __construct(private CategoryRepoInterface $repository)
+    public function __construct(
+        private CategoryRepoInterface $repository,
+        private RestCategoryRepository $restRepository
+    )
     {
         parent::__construct();
     }
 
     public function parentCategory(CategoryFilterRequest $request): JsonResponse
     {
-        $categories = $this->repository->parentCategories($request->merge(['active' => 1])->all());
+        $categories = $this->restRepository->parentCategories($request->merge(['active' => 1])->all());
 
         return $this->successResponse(
             __('errors.' . ResponseError::NO_ERROR, locale: $this->language),
@@ -54,7 +58,7 @@ class CategoryController extends RestBaseController
 
     public function paginate(CategoryFilterRequest $request): AnonymousResourceCollection
     {
-        $categories = $this->repository->parentCategories($request->merge(['active' => 1])->all());
+        $categories = $this->restRepository->parentCategories($request->merge(['active' => 1])->all());
 
         return CategoryResource::collection($categories);
     }
@@ -77,16 +81,13 @@ class CategoryController extends RestBaseController
      * Search Model by tag name.
      *
      * @param CategoryFilterRequest $request
-     * @return JsonResponse
+     * @return AnonymousResourceCollection
      */
-    public function categoriesSearch(CategoryFilterRequest $request): JsonResponse
+    public function categoriesSearch(CategoryFilterRequest $request): AnonymousResourceCollection
     {
         $categories = $this->repository->categoriesSearch($request->merge(['active' => 1])->all());
 
-        return $this->successResponse(
-            __('errors.' . ResponseError::NO_ERROR, locale: $this->language),
-            CategoryResource::collection($categories)
-        );
+        return CategoryResource::collection($categories);
     }
 
     /**

@@ -18,14 +18,14 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string $title
  * @property string|null $description
  * @method static CategoryTranslationFactory factory(...$parameters)
- * @method static Builder|CategoryTranslation newModelQuery()
- * @method static Builder|CategoryTranslation newQuery()
- * @method static Builder|CategoryTranslation query()
- * @method static Builder|CategoryTranslation whereCategoryId($value)
- * @method static Builder|CategoryTranslation whereDescription($value)
- * @method static Builder|CategoryTranslation whereId($value)
- * @method static Builder|CategoryTranslation whereLocale($value)
- * @method static Builder|CategoryTranslation whereTitle($value)
+ * @method static Builder|self newModelQuery()
+ * @method static Builder|self newQuery()
+ * @method static Builder|self query()
+ * @method static Builder|self whereCategoryId($value)
+ * @method static Builder|self whereDescription($value)
+ * @method static Builder|self whereId($value)
+ * @method static Builder|self whereLocale($value)
+ * @method static Builder|self whereTitle($value)
  * @mixin Eloquent
  */
 class CategoryTranslation extends Model

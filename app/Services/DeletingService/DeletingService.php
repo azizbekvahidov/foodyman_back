@@ -109,10 +109,6 @@ class DeletingService extends CoreService
      */
     public function product(Product|null $product): void
     {
-        if (empty($stock)) {
-            return;
-        }
-
         try {
             $product->stories()->delete();
         } catch (Throwable $e) {
@@ -136,10 +132,6 @@ class DeletingService extends CoreService
      */
     public function stock(Stock|null $stock): void
     {
-        if (empty($stock)) {
-            return;
-        }
-
         try {
             $stock->cartDetails()->delete();
         } catch (Throwable $e) {
@@ -163,7 +155,6 @@ class DeletingService extends CoreService
         } catch (Throwable $e) {
             $this->error($e);
         }
-
     }
 
 }

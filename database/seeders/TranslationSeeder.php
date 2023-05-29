@@ -3,11 +3,14 @@
 namespace Database\Seeders;
 
 use App\Models\Translation;
+use App\Traits\Loggable;
 use DB;
 use Illuminate\Database\Seeder;
+use Throwable;
 
 class TranslationSeeder extends Seeder
 {
+    use Loggable;
     /**
      * Run the database seeds.
      *
@@ -15,24 +18,15 @@ class TranslationSeeder extends Seeder
      */
     public function run(): void
     {
-//        $data = Lang::get('errors');
-//
-//        foreach ($data as $index => $item){
-//            Translation::updateOrInsert(['key' => $index], [
-//                'status' => true,
-//                'locale' => 'en',
-//                'group' => 'errors',
-//                'value' => $item,
-//                'created_at' => now(),
-//                'updated_at' => now(),
-//            ]);
-//        }
+        try {
+            $filePath = resource_path('lang/translations_en.sql');
 
-        $filePath = resource_path('lang/translations_en.sql');
-
-        if (file_exists($filePath)) {
-            Translation::truncate();
-            DB::unprepared(file_get_contents($filePath));
+            if (file_exists($filePath)) {
+                Translation::truncate();
+                DB::unprepared(file_get_contents($filePath));
+            }
+        } catch (Throwable $e) {
+            $this->error($e);
         }
     }
 }

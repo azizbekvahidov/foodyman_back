@@ -131,11 +131,19 @@ class DeliveryManSettingService extends CoreService
         try {
             $deliveryManSetting = DeliveryManSetting::where('user_id', auth('sanctum')->id())->first();
 
+            if (empty($deliveryManSetting)) {
+                return [
+                    'status'  => false,
+                    'code'    => ResponseError::ERROR_404,
+                    'message' => __('errors.' . ResponseError::DELIVERYMAN_SETTING_EMPTY, locale: $this->language)
+                ];
+            }
+
             $deliveryManSetting->update($data + ['updated_at' => now()]);
 
             return ['status' => true, 'code' => ResponseError::NO_ERROR, 'data' => $deliveryManSetting];
 
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             $this->error($e);
             return [
                 'status'  => false,
@@ -156,7 +164,7 @@ class DeliveryManSettingService extends CoreService
 
             return ['status' => true, 'code' => ResponseError::NO_ERROR, 'data' => $deliveryManSetting];
 
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             $this->error($e);
             return [
                 'status'  => false,

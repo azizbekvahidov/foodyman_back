@@ -21,6 +21,8 @@ class ShopResource extends JsonResource
         /** @var Shop|JsonResource $this */
         $isSeller = auth('sanctum')->check() && auth('sanctum')->user()?->hasRole('seller');
         $isRecommended = in_array($this->id, array_keys(Cache::get('shop-recommended-ids', [])));
+        $locales = $this->relationLoaded('translations') ?
+            $this->translations->pluck('locale')->toArray() : null;
 
         return [
             'id'                => $this->when($this->id, $this->id),
@@ -30,6 +32,7 @@ class ShopResource extends JsonResource
             'price'             => $this->when($this->rate_price, $this->rate_price),
             'price_per_km'      => $this->when($this->rate_price_per_km, $this->rate_price_per_km),
             'tax'               => $this->when($this->tax, $this->tax),
+            'service_fee'       => $this->when($this->service_fee, $this->service_fee),
             'percentage'        => $this->when($this->percentage, $this->percentage),
             'phone'             => $this->when($this->phone, $this->phone),
             'show_type'         => $this->when($this->show_type, $this->show_type),
@@ -60,7 +63,7 @@ class ShopResource extends JsonResource
             'translation'       => TranslationResource::make($this->whenLoaded('translation')),
             'tags'              => ShopTagResource::collection($this->whenLoaded('tags')),
             'translations'      => TranslationResource::collection($this->whenLoaded('translations')),
-            'locales'           => $this->relationLoaded('translations') ? $this->translations->pluck('locale')->toArray() : [],
+            'locales'           => $this->when($locales, $locales),
             'seller'            => UserResource::make($this->whenLoaded('seller')),
             'subscription'      => ShopSubscriptionResource::make($this->whenLoaded('subscription')),
             'categories'        => CategoryResource::collection($this->whenLoaded('categories')),
@@ -69,6 +72,7 @@ class ShopResource extends JsonResource
             'shop_payments'     => ShopPaymentResource::collection($this->whenLoaded('shopPayments')),
             'shop_working_days' => ShopWorkingDayResource::collection($this->whenLoaded('workingDays')),
             'shop_closed_date'  => ShopClosedDateResource::collection($this->whenLoaded('closedDates')),
+            'logs'              => ModelLogResource::collection($this->whenLoaded('logs')),
         ];
     }
 }

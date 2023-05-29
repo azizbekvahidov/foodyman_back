@@ -12,19 +12,21 @@ class LanguageSeeder extends Seeder
      *
      * @return void
      */
-    public function run()
+    public function run(): void
     {
         $languages = [
             [
-                'id' => 1,
                 'locale' => 'en',
                 'title' => 'English',
                 'default' => 1,
+                'deleted_at' => null
             ]
         ];
 
-        foreach ($languages as $language){
-            Language::updateOrInsert(['id' => $language['id']], $language);
+        foreach ($languages as $language) {
+
+            Language::withTrashed()
+                ->updateOrInsert(['locale' => $language['locale']], $language);
         }
     }
 }

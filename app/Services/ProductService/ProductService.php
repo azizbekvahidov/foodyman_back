@@ -121,8 +121,8 @@ class ProductService extends CoreService implements ProductServiceInterface
                 ];
             }
 
-            /** @var Product $product */
-            $product = $this->model()->firstWhere('uuid', $uuid);
+            /** @var Product|null $product */
+            $product = $this->model()->where('uuid', $uuid)->first();
 
             if (empty($product)) {
                 return [

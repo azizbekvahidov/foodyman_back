@@ -56,6 +56,27 @@ class Booking extends Model
             ->when(data_get($filter, 'start_time_from'), fn($q, $startFrom) => $q->where('start_time', '>=', $startFrom))
             ->when(data_get($filter, 'start_time_to'), fn($q, $startTo) => $q->where('start_time', '<=', $startTo))
             ->when(data_get($filter, 'end_time_from'), fn($q, $endFrom) => $q->where('end_time', '>=', $endFrom))
-            ->when(data_get($filter, 'end_time_to'), fn($q, $endTo) => $q->where('end_time', '<=', $endTo));
+            ->when(data_get($filter, 'end_time_to'), fn($q, $endTo) => $q->where('end_time', '<=', $endTo))
+            ->when(data_get($filter, 'free_from'), function ($query, $freeFrom) use ($filter) {
+
+                $query->whereDoesntHave('users', function ($q) use ($freeFrom, $filter) {
+
+                    $freeTo = data_get($filter, 'free_to');
+
+                    $q
+                        ->where('start_date', '>=', $freeFrom)
+                        ->when($freeTo, fn($b) => $b->where('end_date', '<=', $freeTo))
+                        ->when(data_get($filter, 'table_id'), fn($b, $tableId) => $b->where('table_id', $tableId));
+                });
+
+            })
+            ->when(data_get($filter, 'status'), function ($query, $status) {
+
+                if ($status === 'booked') {
+                    return $query->whereDoesntHave('users', fn($b) => $b->where('end_date', '<=', now()));
+                }
+
+                return $query->whereHas('users', fn($b) => $b->where('end_date', '>=', now()));
+            });
     }
 }

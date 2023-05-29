@@ -96,7 +96,6 @@ class FaqService extends CoreService
 
     public function setStatus(string $uuid): array
     {
-        /** @var Faq $faq */
         $faq = $this->model()->firstWhere('uuid', $uuid);
 
         if (empty($faq)) {
@@ -107,6 +106,7 @@ class FaqService extends CoreService
             ];
         }
 
+        /** @var Faq $faq */
         $faq->update(['active' => !$faq->active]);
 
         return ['status' => true, 'code' => ResponseError::NO_ERROR, 'data' => $faq];

@@ -17,6 +17,16 @@ class ProductResource extends JsonResource
     public function toArray($request): array
     {
         /** @var Product|JsonResource $this */
+        $locales = $this->relationLoaded('translations') ?
+            $this->translations->pluck('locale')->toArray() : null;
+
+        $reviewsLoaded = $this->relationLoaded('reviews');
+
+        $isReviewCount   = $this->reviews_count || $reviewsLoaded;
+        $isReviewCount   = $isReviewCount ? $this->reviews_count ?? $this->reviews?->count() : null;
+
+        $isReviewPercent = $this->reviews_avg_rating || $reviewsLoaded;
+        $isReviewPercent = $isReviewPercent ? $this->reviews_avg_rating ?? $this->reviews?->avg('rating') : null;
 
         return [
             'id'                    => $this->when($this->id, $this->id),
@@ -31,21 +41,26 @@ class ProductResource extends JsonResource
             'status'                => $this->when($this->status, $this->status),
             'active'                => (bool) $this->active,
             'addon'                 => (bool) $this->addon,
+            'vegetarian'            => (bool) $this->vegetarian,
             'img'                   => $this->when($this->img, $this->img),
+            'kcal'                  => $this->when($this->kcal, $this->kcal),
+            'carbs'                 => $this->when($this->carbs, $this->carbs),
+            'protein'               => $this->when($this->protein, $this->protein),
+            'fats'                  => $this->when($this->fats, $this->fats),
             'min_qty'               => $this->when($this->min_qty, $this->min_qty),
             'max_qty'               => $this->when($this->max_qty, $this->max_qty),
             'created_at'            => $this->when($this->created_at, $this->created_at?->format('Y-m-d H:i:s')),
             'updated_at'            => $this->when($this->updated_at, $this->updated_at?->format('Y-m-d H:i:s')),
             'deleted_at'            => $this->when($this->deleted_at, $this->deleted_at?->format('Y-m-d H:i:s')),
             'order_details_count'   => $this->when($this->order_details_count, $this->order_details_count),
-            'reviews_count'         => $this->whenLoaded('reviews', $this->reviews_count),
-            'rating_percent'        => $this->whenLoaded('reviews', $this->reviews->avg('rating')),
+            'reviews_count'         => $this->when($isReviewCount, $isReviewCount),
+            'rating_percent'        => $this->when($isReviewPercent, $isReviewPercent),
 
             // Relations
             'discounts'             => SimpleDiscountResource::collection($this->whenLoaded('discounts')),
             'translation'           => TranslationResource::make($this->whenLoaded('translation')),
             'translations'          => TranslationResource::collection($this->whenLoaded('translations')),
-            'locales'               => $this->whenLoaded('translations', $this->translations->pluck('locale')->toArray()),
+            'locales'               => $this->when($locales, $locales),
             'properties'            => ProductPropertyResource::collection($this->whenLoaded('properties')),
             'stocks'                => SimpleStockResource::collection($this->whenLoaded('stocks')),
             'stock'                 => SimpleStockResource::make($this->whenLoaded('stock')),
@@ -60,6 +75,7 @@ class ProductResource extends JsonResource
             'tags'                  => TagResource::collection($this->whenLoaded('tags')),
             'meta_tags'             => MetaTagResource::collection($this->whenLoaded('metaTags')),
             'addons'                => AddonResource::collection($this->whenLoaded('addons')),
+            'logs'                  => ModelLogResource::collection($this->whenLoaded('logs')),
         ];
     }
 

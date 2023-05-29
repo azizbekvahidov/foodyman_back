@@ -89,6 +89,7 @@ class ShopSectionService extends CoreService
         foreach ($models as $model) {
             /** @var ShopSection $model */
             try {
+                $model->tables()->delete();
                 $model->delete();
             } catch (Throwable $e) {
                 $this->error($e);

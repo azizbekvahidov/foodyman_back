@@ -29,6 +29,7 @@ class BrandResource extends JsonResource
             'deleted_at'        => $this->when($this->deleted_at, $this->deleted_at?->format('Y-m-d H:i:s')),
 
             'meta_tags'         => MetaTagResource::collection($this->whenLoaded('metaTags')),
+            'logs'              => ModelLogResource::collection($this->whenLoaded('logs')),
         ];
     }
 }

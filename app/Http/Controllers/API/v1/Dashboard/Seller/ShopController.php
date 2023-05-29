@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\v1\Dashboard\Seller;
 use App\Helpers\ResponseError;
 use App\Http\Requests\Shop\StoreRequest;
 use App\Http\Resources\ShopResource;
+use App\Models\Language;
 use App\Models\Shop;
 use App\Repositories\Interfaces\ShopRepoInterface;
 use App\Services\Interfaces\ShopServiceInterface;
@@ -55,8 +56,15 @@ class ShopController extends SellerBaseController
      */
     public function shopShow(): JsonResponse
     {
+        $locale = data_get(Language::languagesList()->where('default', 1)->first(), 'locale');
 
-        /** @var Shop $shop */
+        if (empty($this->shop?->uuid)) {
+            return $this->onErrorResponse([
+                'code'      => ResponseError::ERROR_404,
+                'message'   => __('errors.' . ResponseError::ERROR_404, locale: $this->language)
+            ]);
+        }
+
         $shop = $this->shopRepository->shopDetails($this->shop->uuid);
 
         if (empty($shop)) {
@@ -66,9 +74,15 @@ class ShopController extends SellerBaseController
             ]);
         }
 
+        /** @var Shop $shop */
         return $this->successResponse(
             __('errors.' . ResponseError::NO_ERROR),
-            ShopResource::make($shop->loadMissing('translations', 'seller.wallet', 'subscription.subscription'))
+            ShopResource::make($shop->loadMissing([
+                'translations',
+                'seller.wallet',
+                'subscription.subscription',
+                'tags.translation' => fn($q) => $q->where('locale', $this->language)->orWhere('locale', $locale),
+            ]))
         );
     }
 

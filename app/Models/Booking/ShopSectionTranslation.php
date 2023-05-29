@@ -2,17 +2,18 @@
 
 namespace App\Models\Booking;
 
-use Eloquent;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * App\Models\ShopSectionTranslation
  *
  * @property int $id
- * @property int $title
- * @property int $locale
+ * @property string $title
+ * @property string $description
+ * @property string $locale
  * @property int $shop_section_id
  * @property ShopSection|null $shopSection
  * @property string|null $deleted_at
@@ -29,4 +30,9 @@ class ShopSectionTranslation extends Model
     protected $guarded = ['id'];
 
     public $timestamps = false;
+
+    public function shopSection(): BelongsTo
+    {
+        return $this->belongsTo(ShopSection::class);
+    }
 }

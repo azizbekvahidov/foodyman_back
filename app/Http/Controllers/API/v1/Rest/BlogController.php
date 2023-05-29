@@ -56,4 +56,17 @@ class BlogController extends RestBaseController
         );
     }
 
+    /**
+     * @return JsonResponse
+     */
+    public function lastShow(): JsonResponse
+    {
+        $show = $this->blogRepository->lastShow();
+
+        return $this->successResponse(
+            __('errors.'. ResponseError::NO_ERROR, locale: $this->language),
+            BlogResource::make($show)
+        );
+    }
+
 }

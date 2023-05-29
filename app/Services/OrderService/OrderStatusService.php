@@ -16,7 +16,6 @@ class OrderStatusService extends CoreService
 
     public function setActive(int $id, array $data): array
     {
-        /** @var OrderStatus $orderStatus */
         $orderStatus = $this->model()->find($id);
 
         if (empty($orderStatus)) {

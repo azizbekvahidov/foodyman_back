@@ -27,12 +27,17 @@ class TranslationService extends CoreService
 
             foreach (is_array($value) ? $value : [] as $index => $item) {
 
-                Translation::create([
+                Translation::updateOrCreate([
+                    'group'     => data_get($data, 'group'),
+                    'key'       => data_get($data, 'key'),
+                    'locale'    => $index,
+                ],[
                     'group'     => data_get($data, 'group'),
                     'key'       => data_get($data, 'key'),
                     'locale'    => $index,
                     'status'    => data_get($data, 'status', 1),
                     'value'     => $item,
+                    'deleted_at' => null,
                 ]);
 
                 try {

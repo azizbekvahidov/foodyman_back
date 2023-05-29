@@ -37,6 +37,7 @@ class RestReceiptResource extends JsonResource
             'id'                => $this->when($this->id, $this->id),
             'shop_id'           => $this->when($this->shop_id, $this->shop_id),
             'img'               => $this->when($this->img, $this->img),
+            'bg_img'            => $this->when($this->bg_img, $this->bg_img),
             'category_id'       => $this->when($this->category_id, $this->category_id),
             'active_time'       => $this->when($this->active_time, $this->active_time),
             'total_time'        => $this->when($this->total_time, $this->total_time),

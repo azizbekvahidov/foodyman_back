@@ -17,11 +17,13 @@ class TagRepository extends CoreRepository
 
     public function paginate($data = []): LengthAwarePaginator
     {
-        /** @var Tag $tags */
         $tags = $this->model();
-        if (!Cache::get('gdfjetjb.rldf') || data_get(Cache::get('gdfjetjb.rldf'), 'active') != 1) {
+
+        if (!Cache::get('tytkjbjkfr.reprijvbv') || data_get(Cache::get('tytkjbjkfr.reprijvbv'), 'active') != 1) {
             abort(403);
         }
+
+        /** @var Tag $tags */
         return $tags
             ->with([
                 'product' => fn ($q) => $q->select(['id', 'uuid', 'shop_id', 'category_id', 'brand_id', 'unit_id']),
@@ -34,7 +36,7 @@ class TagRepository extends CoreRepository
                 fn(Builder $q, $shopId) => $q->whereHas('product', fn ($b) => $b->where('shop_id', $shopId))
             )
             ->when(isset($data['active']), fn($q) => $q->where('active', $data['active']))
-            ->when(isset($filter['deleted_at']), fn($q) => $q->onlyTrashed())
+            ->when(isset($data['deleted_at']), fn($q) => $q->onlyTrashed())
             ->orderBy(data_get($data, 'column', 'id'), data_get($data, 'sort', 'desc'))
             ->paginate(data_get($data, 'perPage', 15));
     }

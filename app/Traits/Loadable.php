@@ -27,7 +27,7 @@ trait Loadable
             $image          = new Gallery();
             $image->title   = $title;
             $image->path    = config('app.img_host') . "$file";
-            $image->type    = $type ?? 'main';
+            $image->type    = $type;
             $image->size    = data_get($file, 'size');
             $image->mime    = data_get($file, 'mimeType');
 

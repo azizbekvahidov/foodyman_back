@@ -1,6 +1,7 @@
 <?php
-
 namespace App\Http\Controllers\API\v1\Dashboard\Admin;
+
+set_time_limit(1200);
 
 /**
  * @author  Githubit
@@ -19,7 +20,6 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Symfony\Component\Process\Process;
 
 class BackupController extends AdminBaseController
 {
@@ -69,6 +69,7 @@ class BackupController extends AdminBaseController
         ];
 
         foreach ($files as $item) {
+
             $title = Str::of($item)->after('laravel-backup');
 
             $result = BackupHistory::updateOrCreate([

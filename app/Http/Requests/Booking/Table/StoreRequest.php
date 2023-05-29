@@ -21,8 +21,9 @@ class StoreRequest extends BaseRequest
                 Rule::exists('shop_sections', 'id')
                     ->whereNull('deleted_at')
             ],
-            'tax'               => 'int',
+            'tax'               => 'numeric',
             'chair_count'       => 'string|max:191',
+            'active'            => 'boolean',
         ];
     }
 }

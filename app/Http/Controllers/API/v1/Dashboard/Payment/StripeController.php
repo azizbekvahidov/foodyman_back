@@ -15,6 +15,7 @@ use App\Traits\OnResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Log;
 use Redirect;
 use Throwable;
 
@@ -62,7 +63,7 @@ class StripeController extends Controller
         if (empty($shop)) {
             return $this->onErrorResponse([
                 'code'    => ResponseError::ERROR_404,
-                'message' => __('errors.' . ResponseError::SHOP_NOT_FOUND)
+                'message' => __('errors.' . ResponseError::SHOP_NOT_FOUND, locale: $this->language)
             ]);
         }
 
@@ -119,6 +120,7 @@ class StripeController extends Controller
      */
     public function paymentWebHook(Request $request): void
     {
+        Log::error('paymentWebHook', $request->all());
         $status = $request->input('data.object.status');
 
         $status = match ($status) {

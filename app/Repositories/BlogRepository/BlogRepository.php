@@ -3,6 +3,7 @@
 namespace App\Repositories\BlogRepository;
 
 use App\Models\Blog;
+use App\Models\Language;
 use App\Repositories\CoreRepository;
 
 class BlogRepository extends CoreRepository
@@ -54,5 +55,20 @@ class BlogRepository extends CoreRepository
                 'translation' => fn($q) => $q->where('locale', $this->language)
             ])
             ->firstWhere('uuid', $uuid);
+    }
+
+    public function lastShow()
+    {
+        $locale = data_get(Language::languagesList()->where('default', 1)->first(), 'locale');
+
+        return $this->model()
+            ->whereHas('translation', function ($q) use ($locale) {
+                $q->where('locale', $this->language)->orWhere('locale', $locale);
+            })
+            ->with([
+                'translation' => fn($q) => $q->where('locale', $this->language)->orWhere('locale', $locale)
+            ])
+            ->orderBy('published_at', 'desc')
+            ->first();
     }
 }

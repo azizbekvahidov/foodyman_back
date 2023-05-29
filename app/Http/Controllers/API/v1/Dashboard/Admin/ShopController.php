@@ -103,7 +103,6 @@ class ShopController extends AdminBaseController
      */
     public function show(string $uuid): JsonResponse
     {
-        /** @var Shop $shop */
         $shop = $this->repository->shopDetails($uuid);
 
         if (empty($shop)) {
@@ -113,6 +112,7 @@ class ShopController extends AdminBaseController
             ]);
         }
 
+        /** @var Shop $shop */
         $shop->loadMissing('translations');
 
         return $this->successResponse(
@@ -274,7 +274,7 @@ class ShopController extends AdminBaseController
             $this->error($e);
             return $this->errorResponse(
                 ResponseError::ERROR_508,
-                'Excel format incorrect or data invalid ' . $e->getMessage()
+                __('errors.' . ResponseError::ERROR_508, locale: $this->language) . ' | ' . $e->getMessage()
             );
         }
     }

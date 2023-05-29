@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\API\v1\Rest;
 
+set_time_limit(86400);
+
 use App\Http\Controllers\Controller;
 use App\Models\ActiveReferral;
 use App\Models\AssignShopTag;
@@ -42,6 +44,7 @@ use App\Models\Invitation;
 use App\Models\Language;
 use App\Models\Like;
 use App\Models\MetaTag;
+use App\Models\ModelLog;
 use App\Models\Notification;
 use App\Models\NotificationUser;
 use App\Models\Order;
@@ -107,8 +110,8 @@ use App\Models\UserCart;
 use App\Models\UserPoint;
 use App\Models\Wallet;
 use App\Models\WalletHistory;
-use App\Services\UserServices\UserActivityService;
 use App\Traits\ApiResponse;
+use Artisan;
 use Http;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -119,10 +122,10 @@ class TestController extends Controller
 
     public function bosyaTest(Request $request)
     {
-        $model = (new UserActivityService);
-        $model->create(1, 'bosya', 'bosya', 1, User::first());
+
     }
 
+    #region GIG LOGISTIC
     public function gigLogistic(): array
     {
         $headers = [
@@ -162,7 +165,179 @@ class TestController extends Controller
             ]
         ];
     }
+    #endregion
 
+    #region ORDERS UPDATE
+    public function ordersUpdate() {
+
+        $orders = Order::withTrashed()
+            ->where('created_at', '>=' , date('Y-m-d', strtotime('2023-04-25')))
+            ->get();
+
+        foreach ($orders as $order) {
+            $order->update([
+                'deleted_at' => null
+            ]);
+        }
+
+    }
+    #endregion
+
+    #region MODEL LOG DELETE
+    public function modelLogDelete() {
+        DB::table('model_log')->delete();
+    }
+    #endregion
+
+    #region CREATE NEW TRANSLATIONS
+    public function createNewTranslations() {
+
+        $data = include_once base_path('app/Http/Controllers/API/v1/Rest/json.php');
+
+        foreach ($data as $key => $value) {
+            Translation::updateOrCreate([
+                'key'       => $key,
+                'locale'    => 'en'
+            ], [
+                'value'     => $value,
+                'status'    => 1,
+                'group'     => 'web',
+            ]);
+        }
+
+    }
+    #endregion
+
+    #region TESTS
+    public function tests() {
+        //        --unit
+        Artisan::call('make:test ActiveReferralTest');
+        Artisan::call('make:test AssignShopTagTest');
+        Artisan::call('make:test BackupHistoryTest');
+        Artisan::call('make:test BannerTest');
+        Artisan::call('make:test BannerShopTest');
+        Artisan::call('make:test BannerTranslationTest');
+        Artisan::call('make:test BlogTest');
+        Artisan::call('make:test BlogTranslationTest');
+        Artisan::call('make:test BonusTest');
+        Artisan::call('make:test BranchTest');
+        Artisan::call('make:test BranchTranslationTest');
+        Artisan::call('make:test BrandTest');
+        Artisan::call('make:test CareerTest');
+        Artisan::call('make:test CareerTranslationTest');
+        Artisan::call('make:test CartTest');
+        Artisan::call('make:test CartDetailTest');
+        Artisan::call('make:test CategoryTest');
+        Artisan::call('make:test CategoryTranslationTest');
+        Artisan::call('make:test ChatTest');
+        Artisan::call('make:test ChatRequestTest');
+        Artisan::call('make:test CouponTest');
+        Artisan::call('make:test CouponTranslationTest');
+        Artisan::call('make:test CurrencyTest');
+        Artisan::call('make:test DeliveryManSettingTest');
+        Artisan::call('make:test DeliveryTranslationTest');
+        Artisan::call('make:test DeliveryZoneTest');
+        Artisan::call('make:test DiscountTest');
+        Artisan::call('make:test EmailSettingTest');
+        Artisan::call('make:test EmailSubscriptionTest');
+        Artisan::call('make:test EmailTemplateTest');
+        Artisan::call('make:test ExtraGroupTest');
+        Artisan::call('make:test ExtraGroupTranslationTest');
+        Artisan::call('make:test ExtraValueTest');
+        Artisan::call('make:test FaqTest');
+        Artisan::call('make:test FaqTranslationTest');
+        Artisan::call('make:test GalleryTest');
+        Artisan::call('make:test InvitationTest');
+        Artisan::call('make:test LandingPageTest');
+        Artisan::call('make:test LanguageTest');
+        Artisan::call('make:test LikeTest');
+        Artisan::call('make:test MenuTest');
+        Artisan::call('make:test MenuProductTest');
+        Artisan::call('make:test MenuTranslationTest');
+        Artisan::call('make:test MetaTagTest');
+        Artisan::call('make:test ModelLogTest');
+        Artisan::call('make:test NotificationTest');
+        Artisan::call('make:test NotificationUserTest');
+        Artisan::call('make:test OrderTest');
+        Artisan::call('make:test OrderCouponTest');
+        Artisan::call('make:test OrderDetailTest');
+        Artisan::call('make:test OrderRefundTest');
+        Artisan::call('make:test OrderStatusTest');
+        Artisan::call('make:test PageTest');
+        Artisan::call('make:test PageTranslationTest');
+        Artisan::call('make:test PaymentTest');
+        Artisan::call('make:test PaymentPayloadTest');
+        Artisan::call('make:test PaymentProcessTest');
+        Artisan::call('make:test PayoutTest');
+        Artisan::call('make:test PointTest');
+        Artisan::call('make:test PointHistoryTest');
+        Artisan::call('make:test PrivacyPolicyTest');
+        Artisan::call('make:test PrivacyPolicyTranslationTest');
+        Artisan::call('make:test ProductTest');
+        Artisan::call('make:test ProductAddonTest');
+        Artisan::call('make:test ProductDiscountTest');
+        Artisan::call('make:test ProductExtraTest');
+        Artisan::call('make:test ProductPropertiesTest');
+        Artisan::call('make:test ProductTranslationTest');
+        Artisan::call('make:test PushNotificationTest');
+        Artisan::call('make:test ReceiptTest');
+        Artisan::call('make:test ReceiptIngredientTest');
+        Artisan::call('make:test ReceiptInstructionTest');
+        Artisan::call('make:test ReceiptNutritionTest');
+        Artisan::call('make:test ReceiptNutritionTranslationTest');
+        Artisan::call('make:test ReceiptStockTest');
+        Artisan::call('make:test ReceiptTranslationTest');
+        Artisan::call('make:test ReferralTest');
+        Artisan::call('make:test ReferralTranslationTest');
+        Artisan::call('make:test ReviewTest');
+        Artisan::call('make:test SettingsTest');
+        Artisan::call('make:test ShopTest');
+        Artisan::call('make:test ShopCategoryTest');
+        Artisan::call('make:test ShopClosedDateTest');
+        Artisan::call('make:test ShopDeliverymanSettingTest');
+        Artisan::call('make:test ShopGalleryTest');
+        Artisan::call('make:test ShopPaymentTest');
+        Artisan::call('make:test ShopSubscriptionTest');
+        Artisan::call('make:test ShopTagTest');
+        Artisan::call('make:test ShopTagTranslationTest');
+        Artisan::call('make:test ShopTranslationTest');
+        Artisan::call('make:test ShopWorkingDayTest');
+        Artisan::call('make:test SmsGatewayTest');
+        Artisan::call('make:test SmsPayloadTest');
+        Artisan::call('make:test SocialProviderTest');
+        Artisan::call('make:test StockTest');
+        Artisan::call('make:test StockAddonTest');
+        Artisan::call('make:test StockExtraTest');
+        Artisan::call('make:test StoryTest');
+        Artisan::call('make:test SubscriptionTest');
+        Artisan::call('make:test TagTest');
+        Artisan::call('make:test TagTranslationTest');
+        Artisan::call('make:test TermConditionTest');
+        Artisan::call('make:test TermConditionTranslationTest');
+        Artisan::call('make:test TicketTest');
+        Artisan::call('make:test TransactionTest');
+        Artisan::call('make:test TranslationTest');
+        Artisan::call('make:test UnitTest');
+        Artisan::call('make:test UnitTranslationTest');
+        Artisan::call('make:test UserTest');
+        Artisan::call('make:test UserActivityTest');
+        Artisan::call('make:test UserAddressTest');
+        Artisan::call('make:test UserCartTest');
+        Artisan::call('make:test UserPointTest');
+        Artisan::call('make:test WalletTest');
+        Artisan::call('make:test WalletHistoryTest');
+        Artisan::call('make:test BookingTest');
+        Artisan::call('make:test BookingShopTest');
+        Artisan::call('make:test ShopBookingClosedDateTest');
+        Artisan::call('make:test ShopBookingWorkingDayTest');
+        Artisan::call('make:test ShopSectionTest');
+        Artisan::call('make:test ShopSectionTranslationTest');
+        Artisan::call('make:test TableTest');
+        Artisan::call('make:test UserBookingTest');
+    }
+    #endregion
+
+    #region MODELS
     public function allModels(): bool|string
     {
         $tables = collect([
@@ -286,4 +461,5 @@ class TestController extends Controller
 
         return json_encode($columns->unique()->values()->toArray());
     }
+    #endregion
 }

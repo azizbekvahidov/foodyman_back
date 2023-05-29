@@ -14,14 +14,18 @@ class ShopTagRepository extends CoreRepository
         return ShopTag::class;
     }
 
-    public function paginate($data = []): LengthAwarePaginator
+    /**
+     * @param array $data
+     * @return LengthAwarePaginator
+     */
+    public function paginate(array $data = []): LengthAwarePaginator
     {
         /** @var ShopTag $shopTags */
         $shopTags = $this->model();
 
         return $shopTags
             ->with([
-                'translation'       => fn($q) => $q->where('locale', $this->language),
+                'translation' => fn($q) => $q->where('locale', $this->language),
             ])
             ->when(data_get($data, 'search'), function (Builder $query, $search) {
                 $query->whereHas('translation', fn($q) => $q->where('title', 'like', "%$search%"));
@@ -35,7 +39,7 @@ class ShopTagRepository extends CoreRepository
     {
         return $shopTag->loadMissing([
             'translations',
-            'translation'       => fn($q) => $q->where('locale', $this->language),
+            'translation' => fn($q) => $q->where('locale', $this->language),
         ]);
     }
 }

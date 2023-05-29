@@ -17,6 +17,9 @@ class TagResource extends JsonResource
     public function toArray($request): array
     {
         /** @var Tag|JsonResource $this */
+        $locales = $this->relationLoaded('translations') ?
+            $this->translations->pluck('locale')->toArray() : null;
+
         return [
             'id'            => $this->when($this->id, $this->id),
             'active'        => (bool)$this->active,
@@ -27,7 +30,7 @@ class TagResource extends JsonResource
             'product'       => ProductResource::make($this->whenLoaded('product')),
             'translation'   => TranslationResource::make($this->whenLoaded('translation')),
             'translations'  => TranslationResource::collection($this->whenLoaded('translations')),
-            'locales'       => $this->whenLoaded('translations', $this->translations->pluck('locale')->toArray()),
+            'locales'       => $this->when($locales, $locales),
         ];
     }
 }

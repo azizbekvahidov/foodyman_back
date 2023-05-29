@@ -63,7 +63,6 @@ class PaymentService extends CoreService
      */
     public function setActive(int $id): array
     {
-        /** @var Payment $payment */
         $payment = $this->model()->find($id);
 
         if (empty($payment)) {

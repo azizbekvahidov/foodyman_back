@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
@@ -30,6 +31,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read Collection|Ticket[] $children
  * @property-read int|null $children_count
+ * @property-read Collection|ModelLog[] $logs
+ * @property-read int|null $logs_count
  * @method static TicketFactory factory(...$parameters)
  * @method static Builder|Ticket filter($array)
  * @method static Builder|Ticket newModelQuery()
@@ -69,10 +72,15 @@ class Ticket extends Model
         return $this->hasMany(self::class, 'parent_id');
     }
 
+    public function logs(): MorphMany
+    {
+        return $this->morphMany(ModelLog::class, 'model');
+    }
+
     public function scopeFilter($query, $array) {
         $query
             ->when(isset($array['status']),             fn($q)              => $q->where('status', $array['status']))
-            ->when(isset($filter['deleted_at']),        fn($q)              => $q->onlyTrashed())
+            ->when(isset($array['deleted_at']),         fn($q)              => $q->onlyTrashed())
             ->when(data_get($array, 'created_by'),  fn($q, $createdBy)  => $q->where('created_by', $createdBy))
             ->when(data_get($array, 'user_id'),     fn($q, $userId)     => $q->where('user_id', $userId))
             ->when(data_get($array, 'type'),        fn($q, $type)       => $q->where('type', $type));

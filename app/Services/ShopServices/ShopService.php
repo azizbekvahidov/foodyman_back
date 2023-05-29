@@ -224,8 +224,8 @@ class ShopService extends CoreService implements ShopServiceInterface
     public function imageDelete(string $uuid, array $data): array
     {
 
-        /** @var Shop $shop */
-        $shop = Shop::firstWhere('uuid', $uuid);
+        /** @var Shop|null $shop */
+        $shop = Shop::where('uuid', $uuid)->first();
 
         if (empty($shop)) {
             return [

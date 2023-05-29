@@ -22,7 +22,7 @@ class DiscountService extends CoreService
 
             $discount = DB::transaction(function () use ($data) {
                 /** @var Discount $discount */
-                $this->model()->create($data);
+                $discount = $this->model()->create($data);
 
                 if (!empty(data_get($data, 'products.*'))) {
                     $discount->products()->sync(data_get($data, 'products'));

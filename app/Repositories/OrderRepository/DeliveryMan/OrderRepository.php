@@ -5,7 +5,6 @@ namespace App\Repositories\OrderRepository\DeliveryMan;
 use App\Models\Order;
 use App\Repositories\CoreRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Builder;
 
 class OrderRepository extends CoreRepository
 {
@@ -24,13 +23,12 @@ class OrderRepository extends CoreRepository
             ->filter($data)
             ->withCount('orderDetails')
             ->with([
-                'deliveryMan',
+                'cook:id,firstname,lastname,img,phone,email',
                 'currency' => fn($q) => $q->select('id', 'title', 'symbol'),
                 'transaction.paymentSystem',
                 'shop.translation' => fn($q) => $q->where('locale', $this->language),
                 'user',
             ])
-            ->updatedDate(data_get($data, 'updated_at', '2021-01-01'))
             ->orderBy(data_get($data, 'column', 'id'), data_get($data, 'sort', 'desc'))
             ->paginate(data_get($data, 'perPage', 10));
     }
@@ -48,9 +46,11 @@ class OrderRepository extends CoreRepository
             ->withTrashed()
             ->with([
                 'user',
+                'myAddress',
                 'review',
-                'deliveryMan',
                 'coupon',
+                'waiter:id,firstname,lastname,img,phone,email',
+                'cook:id,firstname,lastname,img,phone,email',
                 'shop:id,location,tax,price,price_per_km,background_img,logo_img,uuid,phone',
                 'shop.translation' => fn($q) => $q->where('locale', $this->language),
                 'transaction.paymentSystem' => function ($q) {
@@ -65,11 +65,6 @@ class OrderRepository extends CoreRepository
                 'currency' => function ($q) {
                     $q->select('id', 'title', 'symbol');
                 }])
-            ->where(function (Builder $query) {
-                $invitations = auth('sanctum')->user()->invitations->pluck('shop_id')->toArray();
-                $query->where('deliveryman', auth('sanctum')->id())
-                    ->orWhereIn('shop_id', $invitations);
-            })
             ->find($id);
     }
 }

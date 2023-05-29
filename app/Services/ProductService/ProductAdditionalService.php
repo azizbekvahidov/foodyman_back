@@ -69,7 +69,6 @@ class ProductAdditionalService extends CoreService
      */
     public function createOrUpdateExtras(string $uuid, array $data): array
     {
-        /** @var Product $product */
         $product = $this->model()->firstWhere('uuid', $uuid);
 
         if (empty($product)) {

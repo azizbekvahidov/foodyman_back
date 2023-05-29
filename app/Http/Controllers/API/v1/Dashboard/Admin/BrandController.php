@@ -185,7 +185,7 @@ class BrandController extends AdminBaseController
      */
     public function brandsSearch(Request $request): AnonymousResourceCollection
     {
-        $brands = $this->brandRepository->brandsSearch($request->input('search', ''));
+        $brands = $this->brandRepository->brandsSearch($request->all());
 
         return BrandResource::collection($brands);
     }
@@ -236,7 +236,7 @@ class BrandController extends AdminBaseController
         } catch (Exception $e) {
             return $this->errorResponse(
                 ResponseError::ERROR_508,
-                'Excel format incorrect or data invalid ' . $e->getMessage()
+                __('errors.' . ResponseError::ERROR_508, locale: $this->language) . ' | ' . $e->getMessage()
             );
         }
     }

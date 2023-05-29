@@ -119,10 +119,10 @@ class AuthByMobilePhone extends CoreService
                     'password'          => bcrypt(data_get($data, 'password', 'password')),
                 ]);
 
-            $id = Notification::where('type', Notification::PUSH)->select(['id', 'type'])->first()?->id;
+            $ids = Notification::pluck('id')->toArray();
 
-            if ($id) {
-                $user->notifications()->sync([$id]);
+            if ($ids) {
+                $user->notifications()->sync($ids);
             } else {
                 $user->notifications()->forceDelete();
             }

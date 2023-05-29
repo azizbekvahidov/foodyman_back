@@ -7,16 +7,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Payment\StripeRequest;
 use App\Http\Requests\Shop\SubscriptionRequest;
 use App\Models\Currency;
-use App\Models\Subscription;
 use App\Models\WalletHistory;
 use App\Services\PaymentService\FlutterWaveService;
 use App\Traits\ApiResponse;
 use App\Traits\OnResponse;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Log;
-use Redirect;
 use Throwable;
 
 class FlutterWaveController extends Controller
@@ -64,7 +61,7 @@ class FlutterWaveController extends Controller
         if (empty($shop)) {
             return $this->onErrorResponse([
                 'code'    => ResponseError::ERROR_404,
-                'message' => __('errors.' . ResponseError::SHOP_NOT_FOUND)
+                'message' => __('errors.' . ResponseError::SHOP_NOT_FOUND, locale: $this->language)
             ]);
         }
 
@@ -91,32 +88,6 @@ class FlutterWaveController extends Controller
 
     /**
      * @param Request $request
-     * @return RedirectResponse
-     */
-    public function orderResultTransaction(Request $request): RedirectResponse
-    {
-        $orderId = (int)$request->input('order_id');
-
-        $to = config('app.front_url') . "orders/$orderId";
-
-        return Redirect::to($to);
-    }
-
-    /**
-     * @param Request $request
-     * @return RedirectResponse
-     */
-    public function subscriptionResultTransaction(Request $request): RedirectResponse
-    {
-        $subscription = Subscription::find((int)$request->input('subscription_id'));
-
-        $to = config('app.front_url') . "seller/subscriptions/$subscription->id";
-
-        return Redirect::to($to);
-    }
-
-    /**
-     * @param Request $request
      * @return void
      */
     public function paymentWebHook(Request $request): void
@@ -124,8 +95,9 @@ class FlutterWaveController extends Controller
         $status = $request->input('data.status');
 
         $status = match ($status) {
-            'succeeded', 'success'  => WalletHistory::PAID,
-            default                 => 'progress',
+            'succeeded', 'successful', 'success'                         => WalletHistory::PAID,
+            'failed', 'cancelled', 'reversed', 'chargeback', 'disputed'  => WalletHistory::CANCELED,
+            default                                                      => 'progress',
         };
 
         $token = $request->input('data.id');

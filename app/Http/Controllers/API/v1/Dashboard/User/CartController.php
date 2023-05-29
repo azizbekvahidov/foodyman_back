@@ -42,7 +42,6 @@ class CartController extends UserBaseController
      */
     public function get(Request $request): JsonResponse
     {
-        $request->input('user_in_group');
         $cart = $this->repository->get($request->input('shop_id', 0));
 
         if (!$cart) {
@@ -111,6 +110,22 @@ class CartController extends UserBaseController
     public function delete(FilterParamsRequest $request): JsonResponse
     {
         $result = $this->service->delete($request->input('ids', []));
+
+        if (!data_get($result, 'status')) {
+            return $this->onErrorResponse($result);
+        }
+
+        return $this->successResponse(
+            __('errors.' . ResponseError::RECORD_WAS_SUCCESSFULLY_DELETED, locale: $this->language)
+        );
+    }
+
+    /**
+     * @return JsonResponse
+     */
+    public function myDelete(): JsonResponse
+    {
+        $result = $this->service->myDelete(auth('sanctum')->id());
 
         if (!data_get($result, 'status')) {
             return $this->onErrorResponse($result);

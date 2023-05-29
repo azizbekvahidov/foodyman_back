@@ -2,11 +2,14 @@
 
 namespace Database\Seeders;
 
+use App\Traits\Loggable;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
+use Throwable;
 
 class RoleSeeder extends Seeder
 {
+    use Loggable;
     /**
      * Run the database seeds.
      *
@@ -51,6 +54,20 @@ class RoleSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
+                'id' => 31,
+                'name' => 'waiter',
+                'guard_name' => 'web',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'id' => 41,
+                'name' => 'cook',
+                'guard_name' => 'web',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
                 'id' => 99,
                 'name' => 'admin',
                 'guard_name' => 'web',
@@ -60,7 +77,11 @@ class RoleSeeder extends Seeder
         ];
 
         foreach ($roles as $role) {
-            Role::updateOrInsert(['id' => $role['id']], $role);
+            try {
+                Role::updateOrInsert(['id' => $role['id']], $role);
+            } catch (Throwable $e) {
+                $this->error($e);
+            }
         }
     }
 }

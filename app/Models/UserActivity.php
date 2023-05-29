@@ -22,18 +22,18 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property int $device
  * @property int $agent
  * @property int $created_at
- * @method static Builder|Settings newModelQuery()
- * @method static Builder|Settings newQuery()
- * @method static Builder|Settings query()
- * @method static Builder|Settings filter(array $value)
- * @method static Builder|Settings whereId($value)
- * @method static Builder|Settings whereUserId($value)
- * @method static Builder|Settings whereType($value)
- * @method static Builder|Settings whereValue($value)
- * @method static Builder|Settings whereIp($value)
- * @method static Builder|Settings whereDevice($value)
- * @method static Builder|Settings whereAgent($value)
- * @method static Builder|Settings whereCreatedAt($value)
+ * @method static Builder|self newModelQuery()
+ * @method static Builder|self newQuery()
+ * @method static Builder|self query()
+ * @method static Builder|self filter(array $value)
+ * @method static Builder|self whereId($value)
+ * @method static Builder|self whereUserId($value)
+ * @method static Builder|self whereType($value)
+ * @method static Builder|self whereValue($value)
+ * @method static Builder|self whereIp($value)
+ * @method static Builder|self whereDevice($value)
+ * @method static Builder|self whereAgent($value)
+ * @method static Builder|self whereCreatedAt($value)
  * @mixin Eloquent
  */
 class UserActivity extends Model

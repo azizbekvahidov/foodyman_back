@@ -65,7 +65,7 @@ class OrderResource extends JsonResource
             'address'                       => $this->when($this->address, $this->address),
             'delivery_type'                 => $this->when($this->delivery_type, $this->delivery_type),
             'delivery_fee'                  => $this->when($this->rate_delivery_fee, $this->rate_delivery_fee),
-            'deliveryman'                   => UserResource::make($this->whenLoaded('deliveryMan')),
+            'waiter_fee'                    => $this->when($this->rate_waiter_fee, $this->rate_waiter_fee),
             'delivery_date'                 => $this->when($this->delivery_date, $this->delivery_date),
             'delivery_time'                 => $this->when($this->delivery_time, $this->delivery_time),
             'phone'                         => $this->when($this->phone, $this->phone),
@@ -79,6 +79,9 @@ class OrderResource extends JsonResource
             'updated_at'                    => $this->when($this->updated_at, $this->updated_at?->format('Y-m-d H:i:s')),
             'deleted_at'                    => $this->when($this->deleted_at, $this->deleted_at?->format('Y-m-d H:i:s')),
             'km'                            => $this->whenLoaded('shop', $location),
+
+            'deliveryman'                   => UserResource::make($this->whenLoaded('deliveryMan')),
+            'waiter'                        => UserResource::make($this->whenLoaded('waiter')),
             'shop'                          => ShopResource::make($this->whenLoaded('shop')),
             'currency'                      => CurrencyResource::make($this->whenLoaded('currency')),
             'user'                          => UserResource::make($this->whenLoaded('user')),
@@ -91,6 +94,8 @@ class OrderResource extends JsonResource
             'order_refunds'                 => OrderRefundResource::collection($this->whenLoaded('orderRefunds')),
             'coupon'                        => CouponResource::make($this->whenLoaded('coupon')),
             'galleries'                     => GalleryResource::collection($this->whenLoaded('galleries')),
+            'logs'                          => ModelLogResource::collection($this->whenLoaded('logs')),
+            'my_address'                    => UserAddressResource::make($this->whenLoaded('myAddress')),
         ];
     }
 }

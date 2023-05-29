@@ -21,6 +21,7 @@ use Illuminate\Support\Collection;
  * @property int $id
  * @property int $shop_id
  * @property string $img
+ * @property string $bg_img
  * @property string $discount_type
  * @property int $discount_price
  * @property int $category_id
@@ -71,8 +72,8 @@ class Receipt extends Model
     ];
 
     public const DISCOUNT_TYPE_VALUES = [
-        0   => self::DISCOUNT_TYPE_FIX,
-        1   => self::DISCOUNT_TYPE_PERCENT
+        0 => self::DISCOUNT_TYPE_FIX,
+        1 => self::DISCOUNT_TYPE_PERCENT
     ];
 
     public function shop(): BelongsTo
@@ -141,31 +142,31 @@ class Receipt extends Model
             ->when(data_get($filter, 'servings_from'), fn($q, $servingsFrom) => $q->where('servings', '>=', (int)$servingsFrom))
             ->when(data_get($filter, 'servings_to'), fn($q, $servingsTo) => $q->where('servings', '<=', (int)$servingsTo))
             ->when(isset($filter['deleted_at']), fn($q) => $q->onlyTrashed())
-            ->when(data_get($filter, 'search'), function ($q, $search) {
-                $q->where(function ($query) use ($search) {
+            ->when(data_get($filter, 'search'), function ($q, $search, $filter) {
+                $q->where(function ($query) use ($search, $filter) {
                     $query
-                        ->whereHas('translation', function ($q) use($search) {
+                        ->whereHas('translation', function ($q) use($search, $filter) {
                             $q->when(isset($filter['deleted_at']), fn($q) => $q->onlyTrashed())
                                 ->where('title', 'LIKE', "%$search%")
                                 ->select('id', 'receipt_id', 'locale', 'title');
                         })
-                        ->orWhereHas('instruction', function ($q) use($search) {
+                        ->orWhereHas('instruction', function ($q) use($search, $filter) {
                             $q->when(isset($filter['deleted_at']), fn($q) => $q->onlyTrashed())
                                 ->where('title', 'LIKE', "%$search%")
                                 ->select('id', 'receipt_id', 'locale', 'title');
                         })
-                        ->orWhereHas('ingredient', function ($q) use($search) {
+                        ->orWhereHas('ingredient', function ($q) use($search, $filter) {
                             $q->when(isset($filter['deleted_at']), fn($q) => $q->onlyTrashed())
                                 ->where('title', 'LIKE', "%$search%")
                                 ->select('id', 'receipt_id', 'locale', 'title');
                         })
-                        ->orWhereHas('nutritions', function ($q) use($search) {
+                        ->orWhereHas('nutritions', function ($q) use($search, $filter) {
                             $q
                                 ->when(isset($filter['deleted_at']), fn($q) => $q->onlyTrashed())
-                                ->where(function ($b) use ($search) {
+                                ->where(function ($b) use ($search, $filter) {
                                     $b->where('weight', 'LIKE', "%$search%")
                                         ->orWhere('percentage', 'LIKE', "%$search%")
-                                        ->orWhereHas('translation', function ($q) use($search) {
+                                        ->orWhereHas('translation', function ($q) use($search, $filter) {
                                             $q->when(isset($filter['deleted_at']), fn($q) => $q->onlyTrashed())
                                                 ->where('title', 'LIKE', "%$search%")
                                                 ->select('id', 'receipt_nutrition_id', 'locale', 'title');

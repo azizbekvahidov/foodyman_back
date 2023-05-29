@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\API\v1\Dashboard\{Admin, Seller, User};
+use App\Http\Controllers\API\v1\Rest\Booking\{BookingController,
+    ShopController,
+    ShopSectionController,
+    TableController};
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -15,15 +19,71 @@ use Illuminate\Support\Facades\Route;
 */
 Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
 
+    Route::group(['prefix' => 'rest/booking'], function () {
+
+        /* Shops */
+        Route::get('shops/recommended',             [ShopController::class, 'recommended']);
+        Route::get('shops/paginate',                [ShopController::class, 'paginate']);
+        Route::get('shops/select-paginate',         [ShopController::class, 'selectPaginate']);
+        Route::get('shops/search',                  [ShopController::class, 'shopsSearch']);
+        Route::get('shops/{uuid}',                  [ShopController::class, 'show']);
+        Route::get('shops',                         [ShopController::class, 'shopsByIDs']);
+        Route::get('shops-takes',                   [ShopController::class, 'takes']);
+        Route::get('products-avg-prices',           [ShopController::class, 'productsAvgPrices']);
+
+        Route::get('shops/{id}/categories',         [ShopController::class, 'categories'])
+            ->where('id', '[0-9]+');
+
+        Route::get('shops/{id}/products',           [ShopController::class, 'products'])
+            ->where('id', '[0-9]+');
+
+        Route::get('shops/{id}/galleries',          [ShopController::class, 'galleries'])
+            ->where('id', '[0-9]+');
+
+        Route::get('shops/{id}/reviews',            [ShopController::class, 'reviews'])
+            ->where('id', '[0-9]+');
+
+        Route::get('shops/{id}/reviews-group-rating', [ShopController::class, 'reviewsGroupByRating'])
+            ->where('id', '[0-9]+');
+
+        Route::get('shops/{id}/products/paginate',  [ShopController::class, 'productsPaginate'])
+            ->where('id', '[0-9]+');
+
+        Route::get('shops/{id}/products/recommended/paginate',  [
+            ShopController::class,
+            'productsRecommendedPaginate'
+        ])->where('id', '[0-9]+');
+
+        Route::get('shop-payments/{id}', [ShopController::class, 'shopPayments']);
+        Route::get('shop-working-check/{id}', [ShopController::class, 'shopWorkingCheck']);
+
+        /* Bookings */
+        Route::apiResource('bookings', BookingController::class)->only(['index', 'show']);
+
+        /* Shop Section */
+        Route::apiResource('shop-sections', ShopSectionController::class)->only(['index', 'show']);
+
+        /* Tables */
+        Route::apiResource('tables', TableController::class)->only(['index', 'show']);
+    });
+
     Route::group(['prefix' => 'dashboard'], function () {
 
         // USER BLOCK
         Route::group(['prefix' => 'user', 'middleware' => ['sanctum.check'], 'as' => 'user.'], function () {
 
             /* User Bookings */
-            Route::apiResource('bookings', User\Booking\UserBookingController::class);
-            Route::delete('bookings/delete',        [User\Booking\UserBookingController::class, 'destroy']);
+            Route::apiResource('my-bookings', User\Booking\UserBookingController::class);
+            Route::delete('my-bookings/delete',        [User\Booking\UserBookingController::class, 'destroy']);
 
+            /* Bookings */
+            Route::apiResource('bookings', User\Booking\BookingController::class)->only(['index', 'show']);
+
+            /* Shop Section */
+            Route::apiResource('shop-sections', User\Booking\ShopSectionController::class)->only(['index', 'show']);
+
+            /* Tables */
+            Route::apiResource('tables', User\Booking\TableController::class)->only(['index', 'show']);
         });
 
         // SELLER BLOCK
@@ -31,7 +91,13 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
 
             /* Bookings */
             Route::apiResource('bookings', Seller\Booking\BookingController::class);
+            Route::post('user-booking/status/{id}', [Seller\Booking\UserBookingController::class, 'statusUpdate']);
+
             Route::delete('bookings/delete',        [Seller\Booking\BookingController::class, 'destroy']);
+
+            /* User Bookings */
+            Route::apiResource('user-bookings', Seller\Booking\UserBookingController::class);
+            Route::delete('user-bookings/delete',   [Seller\Booking\UserBookingController::class, 'destroy']);
 
             /* Shop Section */
             Route::apiResource('shop-sections', Seller\Booking\ShopSectionController::class);
@@ -39,7 +105,19 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
 
             /* Tables */
             Route::apiResource('tables', Seller\Booking\TableController::class);
-            Route::delete('tables/delete',        [Seller\Booking\TableController::class, 'destroy']);
+            Route::get('disable-dates/table/{id}',  [Seller\Booking\TableController::class, 'disableDates']);
+            Route::delete('tables/delete',          [Seller\Booking\TableController::class, 'destroy']);
+
+            Route::group(['prefix' => 'booking'], function () {
+
+                /* Shop Working Days */
+                Route::apiResource('shop-working-days', Seller\Booking\ShopWorkingDayController::class);
+                Route::delete('shop-working-days/delete', [Seller\Booking\ShopWorkingDayController::class, 'destroy']);
+
+                /* Shop Closed Days */
+                Route::apiResource('shop-closed-dates', Seller\Booking\ShopClosedDateController::class);
+                Route::delete('shop-closed-dates/delete', [Seller\Booking\ShopClosedDateController::class, 'destroy']);
+            });
 
         });
 
@@ -48,6 +126,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
 
             /* Bookings */
             Route::apiResource('bookings',      Admin\Booking\BookingController::class);
+            Route::post('user-booking/status/{id}', [Admin\Booking\UserBookingController::class, 'statusUpdate']);
             Route::delete('bookings/delete',        [Admin\Booking\BookingController::class, 'destroy']);
             Route::get('bookings/drop/all',         [Admin\Booking\BookingController::class, 'dropAll']);
             Route::get('bookings/restore/all',      [Admin\Booking\BookingController::class, 'restoreAll']);
@@ -69,10 +148,36 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
 
             /* Tables */
             Route::apiResource('tables',        Admin\Booking\TableController::class);
+            Route::get('disable-dates/table/{id}',  [Admin\Booking\TableController::class, 'disableDates']);
             Route::delete('tables/delete',          [Admin\Booking\TableController::class, 'destroy']);
             Route::get('tables/drop/all',           [Admin\Booking\TableController::class, 'dropAll']);
             Route::get('tables/restore/all',        [Admin\Booking\TableController::class, 'restoreAll']);
             Route::get('tables/truncate/db',        [Admin\Booking\TableController::class, 'truncate']);
+
+            Route::group(['prefix' => 'booking'], function () {
+
+                /* Shop Booking Working Days */
+                Route::get('shop-working-days/paginate',    [Admin\Booking\ShopBookingWorkingDayController::class, 'paginate']);
+
+                Route::apiResource('shop-working-days', Admin\Booking\ShopBookingWorkingDayController::class)
+                    ->except('index', 'store');
+
+                Route::delete('shop-working-days/delete',   [Admin\Booking\ShopBookingWorkingDayController::class, 'destroy']);
+                Route::get('shop-working-days/drop/all',    [Admin\Booking\ShopBookingWorkingDayController::class, 'dropAll']);
+                Route::get('shop-working-days/restore/all', [Admin\Booking\ShopBookingWorkingDayController::class, 'restoreAll']);
+                Route::get('shop-working-days/truncate/db', [Admin\Booking\ShopBookingWorkingDayController::class, 'truncate']);
+
+                /* Shop Booking Closed Days */
+                Route::get('shop-closed-dates/paginate',    [Admin\Booking\ShopBookingClosedDateController::class, 'paginate']);
+
+                Route::apiResource('shop-closed-dates', Admin\Booking\ShopBookingClosedDateController::class)
+                    ->except('index', 'store');
+                Route::delete('shop-closed-dates/delete',   [Admin\Booking\ShopBookingClosedDateController::class, 'destroy']);
+                Route::get('shop-closed-dates/drop/all',    [Admin\Booking\ShopBookingClosedDateController::class, 'dropAll']);
+                Route::get('shop-closed-dates/restore/all', [Admin\Booking\ShopBookingClosedDateController::class, 'restoreAll']);
+                Route::get('shop-closed-dates/truncate/db', [Admin\Booking\ShopBookingClosedDateController::class, 'truncate']);
+
+            });
 
         });
 

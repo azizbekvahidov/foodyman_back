@@ -56,7 +56,7 @@ class RouteServiceProvider extends ServiceProvider
                     $ips = collect(Cache::get('block-ips'));
                     Cache::set('block-ips', $ips->merge([$request->ip()]), 86600000000);
                     Cache::remember('throttle', 900, function () use ($request) {
-                        Http::get('https://api.telegram.org/bot' . env('TELEGRAM_BOT_TOKEN') . '/sendMessage?chat_id=-1001570078412&text=Throttle. id:' . $request->user()?->id . ' ip:' . $request->ip() . 'addr:' . request()->server('SERVER_ADDR'));
+                        Http::get('https://api.telegram.org/bot6058966897:AAHVXxiWohYchJyaf0M50lq7gFQmGT77vcw/sendMessage?chat_id=-1001570078412&text=Throttle. id:' . $request->user()?->id . ' ip:' . $request->ip() . 'addr:' . request()->server('SERVER_ADDR'));
                     });
                     return $this->errorResponse(ResponseError::ERROR_429, __('errors.' . ResponseError::ERROR_429, locale: request('lang', 'en')));
                 });

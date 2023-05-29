@@ -30,6 +30,7 @@ class StoreRequest extends BaseRequest
             'description.*'         => 'string|min:3',
             'address'               => 'required|array',
             'address.*'             => 'string|min:2',
+            'service_fee'           => 'integer',
             'location'              => 'array',
             'location.latitude'     => 'numeric',
             'location.longitude'    => 'numeric',

@@ -19,15 +19,15 @@ class TransactionResource extends JsonResource
     {
         /** @var Transaction|JsonResource $this */
         return [
-            'id'                    => $this->id,
-            'payable_id'            => $this->payable_id,
-            'price'                 => $this->price,
-            'payment_trx_id'        => $this->payment_trx_id,
-            'note'                  => $this->note,
+            'id'                    => $this->when($this->id, $this->id),
+            'payable_id'            => $this->when($this->payable_id, $this->payable_id),
+            'price'                 => $this->when($this->price, $this->price),
+            'payment_trx_id'        => $this->when($this->payment_trx_id, $this->payment_trx_id),
+            'note'                  => $this->when($this->note, $this->note),
             'perform_time'          => $this->when($this->perform_time, $this->perform_time),
             'refund_time'           => $this->when($this->refund_time, $this->refund_time),
-            'status'                => $this->status,
-            'status_description'    => $this->status_description,
+            'status'                => $this->when($this->status, $this->status),
+            'status_description'    => $this->when($this->status_description, $this->status_description),
             'created_at'            => $this->when($this->created_at, $this->created_at?->format('Y-m-d H:i:s')),
             'updated_at'            => $this->when($this->updated_at, $this->updated_at?->format('Y-m-d H:i:s')),
             'deleted_at'            => $this->when($this->deleted_at, $this->deleted_at?->format('Y-m-d H:i:s')),

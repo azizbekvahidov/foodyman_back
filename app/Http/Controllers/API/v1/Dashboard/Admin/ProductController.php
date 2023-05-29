@@ -120,9 +120,9 @@ class ProductController extends AdminBaseController
 
     /**
      * @param FilterParamsRequest $request
-     * @return JsonResponse
+     * @return JsonResponse|AnonymousResourceCollection
      */
-    public function selectStockPaginate(FilterParamsRequest $request): JsonResponse
+    public function selectStockPaginate(FilterParamsRequest $request): JsonResponse|AnonymousResourceCollection
     {
         $shop = Shop::find((int)$request->input('shop_id'));
 
@@ -134,10 +134,7 @@ class ProductController extends AdminBaseController
             $request->merge(['shop_id' => $shop->id])->all()
         );
 
-        return $this->successResponse(
-            __('errors.' . ResponseError::RECORD_WAS_SUCCESSFULLY_CREATED, locale: $this->language),
-            StockResource::collection($stocks)
-        );
+        return StockResource::collection($stocks);
 
     }
 
@@ -454,10 +451,10 @@ class ProductController extends AdminBaseController
             Excel::import(new ProductImport($shopId, $this->language), $request->file('file'));
 
             return $this->successResponse('Successfully imported');
-        } catch (Exception) {
+        } catch (Exception $e) {
             return $this->onErrorResponse([
                 'code'  => ResponseError::ERROR_508,
-                'data'  => 'Excel format incorrect or data invalid'
+                'data'  => __('errors.' . ResponseError::ERROR_508, locale: $this->language) . ' | ' . $e->getMessage()
             ]);
         }
     }

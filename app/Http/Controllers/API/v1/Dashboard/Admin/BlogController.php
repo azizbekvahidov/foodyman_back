@@ -69,7 +69,6 @@ class BlogController extends AdminBaseController
      */
     public function show(string $uuid): JsonResponse
     {
-        /** @var Blog $blog */
         $blog = $this->repository->blogByUUID($uuid);
 
         if (empty($blog)) {
@@ -79,6 +78,7 @@ class BlogController extends AdminBaseController
             ]);
         }
 
+        /** @var Blog $blog */
         return $this->successResponse(
             __('errors.' . ResponseError::SUCCESS, locale: $this->language),
             BlogResource::make($blog->loadMissing('translations'))

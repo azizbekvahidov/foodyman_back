@@ -17,6 +17,9 @@ class ExtraGroupResource extends JsonResource
     public function toArray($request): array
     {
         /** @var ExtraGroup|JsonResource $this */
+        $locales = $this->relationLoaded('translations') ?
+            $this->translations->pluck('locale')->toArray() : null;
+
         return [
             'id'            => $this->id,
             'type'          => (string) $this->type,
@@ -27,7 +30,7 @@ class ExtraGroupResource extends JsonResource
             'translation'   => TranslationResource::make($this->whenLoaded('translation')),
             'translations'  => TranslationResource::collection($this->whenLoaded('translations')),
             'extra_values'  => ExtraValueResource::collection($this->whenLoaded('extraValues')),
-            'locales'       => $this->whenLoaded('translations', $this->translations->pluck('locale')->toArray()),
+            'locales'       => $this->when($locales, $locales),
         ];
     }
 }

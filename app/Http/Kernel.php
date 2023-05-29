@@ -101,3 +101,5 @@ class Kernel extends HttpKernel
         'check.shop'        => CheckSellerShop::class,
     ];
 }
+
+

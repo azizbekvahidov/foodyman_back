@@ -146,7 +146,7 @@ class DeliveryZoneController extends RestBaseController
 
         return $this->onErrorResponse([
             'code'    => ResponseError::ERROR_400,
-            'message' => ResponseError::NOT_IN_POLYGON
+            'message' => __('errors.' . ResponseError::NOT_IN_POLYGON, locale: $this->language)
         ]);
     }
 

@@ -14,11 +14,13 @@ class SellerStoreRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'area'      => 'string|max:191',
-            'images'    => 'array',
-            'images.*'  => 'string',
-            'title'     => 'required|array',
-            'title.*'  => 'required|string|min:2|max:191',
+            'area'          => 'string|max:191',
+            'images'        => 'array',
+            'images.*'      => 'string',
+            'title'         => 'required|array',
+            'title.*'       => 'required|string|min:2|max:191',
+            'description'   => 'array',
+            'description.*' => 'string',
         ];
     }
 }

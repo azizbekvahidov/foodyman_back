@@ -16,7 +16,11 @@ class UpdateRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'user_id'               => 'integer|exists:users,id',
+            'user_id'               => [
+                'required',
+                'integer',
+                Rule::exists('users', 'id')->whereNull('deleted_at')
+            ],
             'currency_id'           => 'required|integer|exists:currencies,id',
             'rate'                  => 'required|numeric',
             'shop_id'               => [
@@ -31,6 +35,7 @@ class UpdateRequest extends BaseRequest
             'location.latitude'     => 'required|numeric',
             'location.longitude'    => 'required|numeric',
             'address'               => 'array',
+            'address_id'            => ['integer', Rule::exists('user_addresses', 'id')],
             'phone'                 => 'string',
             'username'              => 'string',
             'delivery_date'         => 'required|date|date_format:Y-m-d',

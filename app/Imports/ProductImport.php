@@ -34,7 +34,7 @@ class ProductImport extends BaseImport implements ToCollection, WithHeadingRow, 
     public function collection(Collection $collection)
     {
         $language = Language::where('default', 1)->first();
-        if (!Cache::get('gdfjetjb.rldf') || data_get(Cache::get('gdfjetjb.rldf'), 'active') != 1) {
+        if (!Cache::get('tytkjbjkfr.reprijvbv') || data_get(Cache::get('tytkjbjkfr.reprijvbv'), 'active') != 1) {
             abort(403);
         }
 

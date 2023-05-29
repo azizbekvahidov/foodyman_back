@@ -8,6 +8,7 @@ use App\Models\Referral;
 use App\Models\Settings;
 use App\Models\User;
 use App\Services\SettingService\SettingService;
+use Cache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -41,15 +42,15 @@ class SettingController extends AdminBaseController
      *
      * @param Request $request
      * @return JsonResponse
-     * @throws InvalidArgumentException
      */
     public function store(Request $request): JsonResponse
     {
         $isRemoveRef = false;
 
         foreach ($request->all() as $index => $item) {
-            Settings::updateOrCreate(['key' => $index],[
-                'value' => $item
+            Settings::withTrashed()->updateOrCreate(['key' => $index],[
+                'value' => $item,
+                'deleted_at' => null
             ]);
 
             if ($index === 'referral_active' && $item) {
@@ -59,6 +60,12 @@ class SettingController extends AdminBaseController
 
         if ($isRemoveRef) {
             $this->clearReferral();
+        }
+
+        try {
+            Cache::delete('admin-settings');
+        } catch (InvalidArgumentException $e) {
+            $this->error($e);
         }
 
         return $this->successResponse(
@@ -92,8 +99,8 @@ class SettingController extends AdminBaseController
             });
 
         try {
-            cache()->delete('admin-settings');
-        } catch (Throwable|InvalidArgumentException $e) {
+            Cache::delete('admin-settings');
+        } catch (InvalidArgumentException $e) {
             $this->error($e);
         }
 

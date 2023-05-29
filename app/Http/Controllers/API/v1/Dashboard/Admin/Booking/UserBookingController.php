@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\v1\Dashboard\Admin\Booking;
 use App\Helpers\ResponseError;
 use App\Http\Controllers\API\v1\Dashboard\Admin\AdminBaseController;
 use App\Http\Requests\Booking\Booking\AdminUserBookingStoreRequest;
+use App\Http\Requests\Booking\Booking\StatusUpdateRequest;
 use App\Http\Requests\FilterParamsRequest;
 use App\Http\Resources\Booking\UserBookingResource;
 use App\Models\Booking\UserBooking;
@@ -15,10 +16,6 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class UserBookingController extends AdminBaseController
 {
-    /**
-     * @param UserBookingService $service
-     * @param UserBookingRepository $repository
-     */
     public function __construct(private UserBookingService $service, private UserBookingRepository $repository)
     {
         parent::__construct();
@@ -83,6 +80,25 @@ class UserBookingController extends AdminBaseController
         $validated = $request->validated();
 
         $result = $this->service->update($userBooking, $validated);
+
+        if (!data_get($result, 'status')) {
+            return $this->onErrorResponse($result);
+        }
+
+        return $this->successResponse(
+            __('errors.' . ResponseError::RECORD_WAS_SUCCESSFULLY_UPDATED, locale: $this->language),
+            UserBookingResource::make(data_get($result, 'data'))
+        );
+    }
+
+    /**
+     * @param int $id
+     * @param StatusUpdateRequest $request
+     * @return JsonResponse
+     */
+    public function statusUpdate(int $id, StatusUpdateRequest $request): JsonResponse
+    {
+        $result = $this->service->statusUpdate($id, $request->validated());
 
         if (!data_get($result, 'status')) {
             return $this->onErrorResponse($result);

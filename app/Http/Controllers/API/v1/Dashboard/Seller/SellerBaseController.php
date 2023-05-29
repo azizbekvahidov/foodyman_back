@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\v1\Dashboard\Seller;
 
 use App\Http\Controllers\Controller;
+use App\Models\Booking\BookingShop;
 use App\Models\Shop;
 use App\Traits\ApiResponse;
 
@@ -10,7 +11,7 @@ abstract class SellerBaseController extends Controller
 {
     use ApiResponse;
 
-    protected Shop|null $shop;
+    protected Shop|BookingShop|null $shop;
 
     public function __construct()
     {

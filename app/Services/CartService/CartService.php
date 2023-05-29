@@ -108,15 +108,14 @@ class CartService extends CoreService
                 ];
             }
 
-            $cartId = DB::transaction(function () use ($data, $cart, $stock, $user) {
+            $cartId = DB::transaction(function () use ($data, $cart, $user) {
 
-                /** @var UserCart $userCart */
                 $userCart = $cart->userCarts()->firstOrCreate([
                     'cart_id' => data_get($cart, 'id'),
                     'user_id' => $user->id,
                 ], $data);
 
-                /** @var CartDetail $cartDetail */
+                /** @var UserCart $userCart */
                 $cartDetail = $userCart->cartDetails()->updateOrCreate([
                     'stock_id'      => data_get($data, 'stock_id'),
                     'user_cart_id'  => $userCart->id,
@@ -126,6 +125,7 @@ class CartService extends CoreService
                     'discount'      => data_get($data, 'discount', 0),
                 ]);
 
+                /** @var CartDetail $cartDetail */
                 $this->bonus($cartDetail);
 
                 return $cart->id;
@@ -135,7 +135,7 @@ class CartService extends CoreService
         } catch (Throwable $e) {
             $this->error($e);
             return [
-                'status'  => true,
+                'status'  => false,
                 'code'    => ResponseError::ERROR_501,
                 'message' => __('errors.' . ResponseError::ERROR_501, locale: $this->language)
             ];
@@ -171,7 +171,7 @@ class CartService extends CoreService
         } catch (Throwable $e) {
             $this->error($e);
             return [
-                'status'  => true,
+                'status'  => false,
                 'code'    => ResponseError::ERROR_501,
                 'message' => __('errors.' . ResponseError::ERROR_501, locale: $this->language)
             ];
@@ -197,7 +197,7 @@ class CartService extends CoreService
         if (!data_get($stock, 'id') || $stock->countable?->status !== Product::PUBLISHED) {
             return [
                 'status' => false,
-                'code'   => ResponseError::ERROR_404,
+                'code'   => ResponseError::ERROR_400,
             ];
         }
 
@@ -271,10 +271,6 @@ class CartService extends CoreService
      */
     public function groupInsertProducts(array $data): array
     {
-        /**
-         * @var Cart $model
-         * @var UserCart $userCart
-         */
         $userCart = UserCart::where('uuid', data_get($data, 'user_cart_uuid'))->first();
 
         $model = $userCart?->cart?->loadMissing([
@@ -296,13 +292,14 @@ class CartService extends CoreService
         }
 
         try {
+            /** @var UserCart $userCart */
             $cartId = $this->collectProducts($data, $model, $userCart);
 
             return $this->successReturn($cartId);
         } catch (Throwable $e) {
             $this->error($e);
             return [
-                'status'  => true,
+                'status'  => false,
                 'code'    => ResponseError::ERROR_501,
                 'message' => __('errors.' . ResponseError::ERROR_501, locale: $this->language)
             ];
@@ -316,7 +313,6 @@ class CartService extends CoreService
      */
     public function openCart(array $data): array
     {
-        /** @var Cart $cart */
         $cart = $this->model()
             ->with('userCarts')
             ->where('shop_id', data_get($data, 'shop_id', 0))
@@ -332,6 +328,7 @@ class CartService extends CoreService
 
         $data['user_id'] = auth('sanctum')->id();
 
+        /** @var Cart $cart */
         $model = $cart->userCart()->create($data);
 
         return ['status' => true, 'code' => ResponseError::NO_ERROR, 'data' => $model];
@@ -347,9 +344,9 @@ class CartService extends CoreService
         /** @var Cart $cart */
         $user  = auth('sanctum')->user();
         $model = $this->model();
-        $cart  = $model->where('owner_id', $user->id)->first();
+        $cart  = $model->with('userCarts')->where('owner_id', $user->id)->first();
 
-        if (data_get($cart, 'userCart')) {
+        if ($cart?->userCart) {
             return [
                 'status'  => false,
                 'code'    => ResponseError::ERROR_501,
@@ -367,18 +364,18 @@ class CartService extends CoreService
 
                 $cart->userCarts()
                      ->firstOrCreate([
-                        'cart_id' => data_get($cart, 'id'),
+                        'cart_id' => $cart->id,
                         'user_id' => $user->id,
                      ], $data);
 
-                return data_get($cart, 'id');
+                return $cart->id;
             });
 
             return $this->successReturn($cartId);
         } catch (Throwable $e) {
             $this->error($e);
             return [
-                'status'  => true,
+                'status'  => false,
                 'code'    => ResponseError::ERROR_501,
                 'message' => __('errors.' . ResponseError::ERROR_501, locale: $this->language)
             ];
@@ -392,6 +389,19 @@ class CartService extends CoreService
     public function delete(?array $ids = []): array
     {
         foreach (Cart::whereIn('id', is_array($ids) ? $ids : [])->get() as $cart) {
+            $cart->delete();
+        }
+
+        return ['status' => true, 'code' => ResponseError::NO_ERROR];
+    }
+
+    /**
+     * @param $ownerId
+     * @return array
+     */
+    public function myDelete($ownerId): array
+    {
+        foreach (Cart::where('owner_id', $ownerId)->get() as $cart) {
             $cart->delete();
         }
 
@@ -424,6 +434,14 @@ class CartService extends CoreService
                 ['stock_id', $cartDetail->stock_id]
             ])->delete();
 
+        }
+
+        if (!$cart) {
+            return [
+                'status' => false,
+                'code'   => ResponseError::ERROR_400,
+                'data'   => null,
+            ];
         }
 
         return $this->successReturn($cart->id);
@@ -466,7 +484,6 @@ class CartService extends CoreService
      */
     public function statusChange(string $uuid, int $cartId): array
     {
-        /** @var Cart $cart */
         $cart = Cart::with([
             'userCart' => fn($query) => $query->where('uuid', $uuid)
         ])
@@ -481,6 +498,7 @@ class CartService extends CoreService
             ];
         }
 
+        /** @var Cart $cart */
         $cart->userCart->update(['status' => !$cart->userCart->status]);
 
         return [
@@ -496,7 +514,6 @@ class CartService extends CoreService
      */
     public function setGroup(?int $id): array
     {
-        /** @var Cart $cart */
         $cart = Cart::with([
             'userCart' => fn($query) => $query->where('user_id', auth('sanctum')->id())
         ])
@@ -511,6 +528,7 @@ class CartService extends CoreService
             ];
         }
 
+        /** @var Cart $cart */
         $cart->update(['group' => !$cart->group]);
 
         return [
@@ -665,7 +683,7 @@ class CartService extends CoreService
         }
     }
 
-    private function bonus(CartDetail $cartDetail)
+    public function bonus(CartDetail $cartDetail)
     {
         $stock = $cartDetail->stock;
 
@@ -701,28 +719,35 @@ class CartService extends CoreService
      */
     private function checkBonus(CartDetail $cartDetail, Bonus $bonus): void
     {
-        $checkByCount = $bonus->type === Bonus::TYPE_COUNT && floor($cartDetail->quantity / $bonus->value) > 0;
-        $checkBySum   = $bonus->type === Bonus::TYPE_SUM   && $cartDetail->price >= $bonus->value;
+        try {
 
-        if ($checkByCount || $checkBySum) {
-            try {
-                $cartDetail->userCart->cartDetails()->updateOrCreate([
+            if ($bonus->type === Bonus::TYPE_COUNT && $cartDetail->quantity < $bonus->value) {
+                CartDetail::where([
                     'stock_id'      => $bonus->bonus_stock_id,
                     'user_cart_id'  => $cartDetail->user_cart_id,
                     'price'         => 0,
-                    'bonus'         => true,
+                    'bonus'         => 1,
                     'discount'      => 0,
-                ], [
-                    'quantity' => $bonus->type === Bonus::TYPE_COUNT ?
-                        $bonus->bonus_quantity * (int)floor($cartDetail->quantity / $bonus->value) :
-                        $bonus->bonus_quantity,
-                ]);
-            } catch (Throwable $e) {
-                $this->error($e);
+                ])->delete();
+
+                return;
             }
 
-        }
+            $cartDetail->loadMissing('userCart.cartDetails')->userCart->cartDetails()->updateOrCreate([
+                'stock_id'      => $bonus->bonus_stock_id,
+                'user_cart_id'  => $cartDetail->user_cart_id,
+                'price'         => 0,
+                'bonus'         => 1,
+                'discount'      => 0,
+            ], [
+                'quantity' => $bonus->type === Bonus::TYPE_COUNT ?
+                    $bonus->bonus_quantity * (int)floor($cartDetail->quantity / $bonus->value) :
+                    $bonus->bonus_quantity,
+            ]);
 
+        } catch (Throwable $e) {
+            $this->error($e);
+        }
     }
 
     /**
@@ -843,18 +868,22 @@ class CartService extends CoreService
      */
     public function calculateTotalPrice(Cart $cart): bool
     {
+        if (empty($cart->userCarts)) {
+            return true;
+        }
+
         $price = 0;
 
         $inReceipts = [];
 
         foreach ($cart->userCarts as $userCart) {
 
-            $cartDetails = $userCart->cartDetails;
+//            $cartDetails = $userCart->cartDetails;
 
-            if (empty($cartDetails)) {
-                $userCart->delete();
-                continue;
-            }
+//            if (empty($cartDetails)) {
+//                $userCart->delete();
+//                continue;
+//            }
 
             foreach ($userCart->cartDetails as $cartDetail) {
 
@@ -885,6 +914,7 @@ class CartService extends CoreService
             DB::table('cart_details')
                 ->whereIn('user_cart_id', is_array($ids) ? $ids : [])
                 ->where('stock_id', $bonus->bonus_stock_id)
+                ->where('bonus', true)
                 ->delete();
 
             unset($inReceipts[$bonus->bonus_stock_id]);
@@ -897,7 +927,7 @@ class CartService extends CoreService
 
         $totalPrice = max($price - $receiptDiscount, 0);
 
-        if ($cart->userCarts?->count() === 0) {
+        if ($cart?->userCarts?->count() === 0) {
             $totalPrice = 0;
         }
 
@@ -959,7 +989,8 @@ class CartService extends CoreService
 
             $receiptCount = !empty($receiptCount) ? min($receiptCount) : 1;
 
-            $originPrice = $receipt->stocks->reduce(fn($c, $i) => $c + ($i?->total_price * ($i?->pivot?->min_quantity ?? 1)));
+            $originPrice = $receipt->stocks
+                ->reduce(fn(mixed $c, $i) => $c + ($i->total_price * ($i->pivot?->min_quantity ?? 1)));
 
             $discountPrice = $receipt->discount_type === 0 ? $receipt->discount_price : $originPrice / 100 * $receipt->discount_price;
 

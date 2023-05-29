@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Services\ProjectService\ProjectService;
 use App\Traits\ApiResponse;
+use Artisan;
 use Closure;
 use Http;
 use Illuminate\Http\RedirectResponse;
@@ -36,24 +37,45 @@ class TrustLicence
      */
     public function handle(Request $request, Closure $next)
     {
-        $response = Cache::remember('gdfjetjb.rldf', self::TTL, function () {
+        $response = Cache::remember('tytkjbjkfr.reprijvbv', self::TTL, function () {
             $response = (new ProjectService)->activationKeyCheck();
             $response = json_decode($response);
 
-            if (isset($response->key) && $response->key == config('credential.purchase_code') &&
-                $response->active && $response->host == request()->getSchemeAndHttpHost()
+            if (
+                isset($response->key) &&
+                $response->key == config('credential.purchase_code') &&
+                $response->active
             ) {
                 return $response;
             }
 
-
             return null;
         });
 
-        if ($request->is($this->allowRoutes) ||
-            ($response != null && $response->local) ||
-            ($response != null && $response->key == config('credential.purchase_code') && $response->active)
+        if (($response != null && $response->local)) {
+
+            try {
+                if (!empty(Cache::get('block-ips'))) {
+                    Cache::delete('block-ips');
+                    Artisan::call('optimize:clear');
+                }
+            } catch (Throwable|InvalidArgumentException) {}
+
+            return $next($request);
+        }
+
+        if (
+            $request->is($this->allowRoutes)
+            || optional($response)->host == request()->getSchemeAndHttpHost()
         ) {
+
+            try {
+                if (!empty(Cache::get('block-ips'))) {
+                    Cache::delete('block-ips');
+                    Artisan::call('optimize:clear');
+                }
+            } catch (Throwable|InvalidArgumentException) {}
+
             return $next($request);
         } else if (!$request->is($this->allowRoutes)) {
             $ips = collect(Cache::get('block-ips'));

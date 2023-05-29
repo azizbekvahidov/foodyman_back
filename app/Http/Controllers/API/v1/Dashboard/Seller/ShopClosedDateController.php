@@ -10,7 +10,6 @@ use App\Http\Resources\ShopResource;
 use App\Repositories\ShopClosedDateRepository\ShopClosedDateRepository;
 use App\Services\ShopClosedDateService\ShopClosedDateService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 
 class ShopClosedDateController extends SellerBaseController

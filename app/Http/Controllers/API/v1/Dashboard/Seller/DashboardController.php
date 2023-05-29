@@ -17,7 +17,7 @@ class DashboardController extends SellerBaseController
     public function ordersStatistics(Request $request): JsonResponse
     {
         if (!in_array($request->input('time'), User::DATES)) {
-            return $this->onErrorResponse(['code' => ResponseError::ERROR_508]);
+            return $this->onErrorResponse(['code' => ResponseError::ERROR_400]);
         }
 
         $result = (new DashboardRepository)->ordersStatistics(
@@ -34,7 +34,7 @@ class DashboardController extends SellerBaseController
     public function ordersChart(Request $request): JsonResponse
     {
         if (!in_array($request->input('time'), User::DATES)) {
-            return $this->onErrorResponse(['code' => ResponseError::ERROR_508]);
+            return $this->onErrorResponse(['code' => ResponseError::ERROR_400]);
         }
 
         $result = (new DashboardRepository)->ordersChart(
@@ -51,7 +51,7 @@ class DashboardController extends SellerBaseController
     public function productsStatistic(Request $request): JsonResponse
     {
         if (!in_array($request->input('time'), User::DATES)) {
-            return $this->onErrorResponse(['code' => ResponseError::ERROR_508]);
+            return $this->onErrorResponse(['code' => ResponseError::ERROR_400]);
         }
 
         $result = (new DashboardRepository)->productsStatistic(
@@ -68,7 +68,7 @@ class DashboardController extends SellerBaseController
     public function usersStatistic(Request $request): JsonResponse
     {
         if (!in_array($request->input('time'), User::DATES)) {
-            return $this->onErrorResponse(['code' => ResponseError::ERROR_508]);
+            return $this->onErrorResponse(['code' => ResponseError::ERROR_400]);
         }
 
         $result = (new DashboardRepository)->usersStatistic(

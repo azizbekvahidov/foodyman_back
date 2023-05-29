@@ -66,21 +66,41 @@ class OrderRefundService extends CoreService
     public function update(OrderRefund $orderRefund, array $data): array
     {
         try {
-            $orderRefund = $orderRefund->loadMissing(['order', 'order.transactions']);
+
+            if ($orderRefund->status == data_get($data, 'status')) {
+                return [
+                    'status' => false,
+                    'code'   => __('errors.' . ResponseError::ERROR_252, locale: $this->language)
+                ];
+            }
+
+            $orderRefund = $orderRefund->loadMissing([
+                'order.shop:id,uuid,user_id',
+                'order.shop.seller:id',
+                'order.shop.seller.wallet:id,uuid',
+                'order.deliveryMan:id',
+                'order.deliveryMan.wallet:id,uuid',
+                'order.user:id',
+                'order.user.wallet:id,uuid',
+                'order.transactions',
+                'order.orderDetails:id,order_id,stock_id,quantity',
+                'order.orderDetails.stock',
+            ]);
 
             /** @var User $user */
             $user = data_get($orderRefund->order, 'user');
 
             /** @var Transaction $transaction */
-            $transaction = optional($orderRefund->order)->transactions()
-                ->where('status', Transaction::STATUS_PAID)
-                ->first();
+            $transaction = $orderRefund?->order
+                ?->transactions()
+                ?->where('status', Transaction::STATUS_PAID)
+                ?->first();
 
             $payment  = data_get(Payment::where('tag', '!=', 'cash')->first(), 'id');
             $isWallet = $payment && optional($orderRefund->order)->transactions()
-                    ->where('payment_sys_id', '!=', $payment)
-                    ->where('status', Transaction::STATUS_PAID)
-                    ->first();
+                    ?->where('payment_sys_id', '!=', $payment)
+                    ?->where('status', Transaction::STATUS_PAID)
+                    ?->first();
 
             if (data_get($data, 'status') === OrderRefund::STATUS_ACCEPTED && $isWallet) {
 
@@ -123,69 +143,69 @@ class OrderRefundService extends CoreService
                     $orderRefund->uploads(data_get($data, 'images'));
                 }
 
-                if ($orderRefund->status === OrderRefund::STATUS_ACCEPTED && data_get($transaction,'id')) {
+                if ($orderRefund->status !== OrderRefund::STATUS_ACCEPTED && !$transaction?->id) {
+                    return true;
+                }
 
-                    $order = $orderRefund->order;
+                $order = $orderRefund->order;
 
-                    if (!$user->wallet) {
-                        throw new Exception(__('errors.' . ResponseError::ERROR_108, locale: $this->language));
-                    }
+                if (!$user->wallet?->id) {
+                    throw new Exception(__('errors.' . ResponseError::ERROR_108, locale: $this->language));
+                }
 
-                    if ($order->transactions->where('status', Transaction::STATUS_PAID)->first()?->id) {
+                if ($order->transactions->where('status', Transaction::STATUS_PAID)->first()?->id) {
+
+                    (new WalletHistoryService)->create([
+                        'type'   => 'topup',
+                        'price'  => $order->total_price,
+                        'note'   => "For Order #$order->id",
+                        'status' => WalletHistory::PAID,
+                        'user'   => $user
+                    ]);
+
+                    if ($order->status === Order::STATUS_DELIVERED) {
+
+                        if (!$order->shop?->seller?->wallet?->id) {
+                            throw new Exception(__('errors.' . ResponseError::ERROR_114, locale: $this->language));
+                        }
 
                         (new WalletHistoryService)->create([
-                            'type'      => 'topup',
-                            'price'     => $order->total_price,
-                            'note'      => "For Order #$order->id",
-                            'status'    => WalletHistory::PAID,
-                            'user'      => $user
+                            'type'   => 'withdraw',
+                            'price'  => $order->total_price - $order->commission_fee,
+                            'note'   => "For Order #$order->id",
+                            'status' => WalletHistory::PAID,
+                            'user'   => $order->shop->seller
                         ]);
 
-                        if ($order->status === Order::STATUS_DELIVERED) {
-
-                            if (!$order->shop?->seller?->wallet) {
-                                throw new Exception(__('errors.' . ResponseError::ERROR_114, locale: $this->language));
-                            }
+                        if ($order->delivery_type === Order::DELIVERY && $order->deliveryMan?->wallet?->id) {
 
                             (new WalletHistoryService)->create([
-                                'type'      => 'withdraw',
-                                'price'     => $order->total_price - $order->commission_fee,
-                                'note'      => "For Order #$order->id",
-                                'status'    => WalletHistory::PAID,
-                                'user'      => $order->shop->seller
+                                'type'   => 'withdraw',
+                                'price'  => $order->delivery_fee,
+                                'note'   => "For Order #$order->id",
+                                'status' => WalletHistory::PAID,
+                                'user'   => $order->deliveryMan
                             ]);
 
-                            if ($order->delivery_type === Order::DELIVERY) {
-
-                                if(!$order->deliveryMan?->id) {
-                                    throw new Exception(__('errors.' . ResponseError::ERROR_113, locale: $this->language));
-                                }
-
-                                (new WalletHistoryService)->create([
-                                    'type'      => 'withdraw',
-                                    'price'     => $order->delivery_fee,
-                                    'note'      => "For Order #$order->id",
-                                    'status'    => WalletHistory::PAID,
-                                    'user'      => $order->deliveryMan
-                                ]);
-
-                            }
+//                          if(!$order->deliveryMan?->wallet?->id) {
+//                              throw new Exception(__('errors.' . ResponseError::ERROR_113, locale: $this->language));
+//                          }
 
                         }
 
                     }
 
-                    $order->orderDetails->map(function (OrderDetail $orderDetail) {
-                        $orderDetail->stock()->increment('quantity', $orderDetail->quantity);
-                    });
-
-                    if ($order->status === Order::STATUS_DELIVERED) {
-
-                        PayReferral::dispatchAfterResponse($order->user, 'decrement');
-                    }
-
                 }
 
+                $order->orderDetails->map(function (OrderDetail $orderDetail) {
+                    $orderDetail->stock()->increment('quantity', $orderDetail->quantity);
+                });
+
+                if ($order->status === Order::STATUS_DELIVERED) {
+                    PayReferral::dispatchAfterResponse($order->user, 'decrement');
+                }
+
+                return true;
             });
 
             return ['status' => true, 'message' => ResponseError::NO_ERROR];
@@ -208,7 +228,7 @@ class OrderRefundService extends CoreService
                        continue;
                    } else if (!in_array($orderRefund->status, [OrderRefund::STATUS_ACCEPTED, OrderRefund::STATUS_CANCELED])) {
                        continue;
-                   } else if(!empty($shopId) && data_get($orderRefund->order, 'shop_id') !== $shopId) {
+                   } else if(!empty($shopId) && $orderRefund->order?->shop_id !== $shopId) {
                        continue;
                    }
                }

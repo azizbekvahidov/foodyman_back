@@ -26,6 +26,7 @@ class UserBookingResource extends JsonResource
             'table_id'      => $this->when($this->table_id,   $this->table_id),
             'start_date'    => $this->when($this->start_date, $this->start_date),
             'end_date'      => $this->when($this->end_date,   $this->end_date),
+            'status'        => $this->when($this->status,     $this->status),
             'deleted_at'    => $this->when($this->deleted_at, $this->deleted_at?->format('Y-m-d H:i:s')),
 
             //Relations

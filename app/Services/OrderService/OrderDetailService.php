@@ -28,6 +28,11 @@ class OrderDetailService extends CoreService
 
         }
 
+        return $this->update($order, $collection);
+    }
+
+    public function update($order, $collection) {
+
         $addons = [];
 
         foreach ($collection as $item) {
@@ -37,7 +42,6 @@ class OrderDetailService extends CoreService
                 continue;
             }
 
-            /** @var Stock $stock */
             $stock = Stock::with([
                 'countable:id,status,shop_id,min_qty,max_qty,tax',
                 'countable.discounts' => fn($q) => $q
@@ -51,6 +55,7 @@ class OrderDetailService extends CoreService
                 continue;
             }
 
+            /** @var Stock $stock */
             $actualQuantity = $this->actualQuantity($stock, data_get($item, 'quantity', 0));
 
             if (empty($actualQuantity) || $actualQuantity <= 0) {
@@ -109,7 +114,6 @@ class OrderDetailService extends CoreService
         }
 
         return $order;
-
     }
 
     public function createOrderUser(Order $order, int $cartId): Order

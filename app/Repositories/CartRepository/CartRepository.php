@@ -34,14 +34,14 @@ class CartRepository extends CoreRepository
         $userId  = auth('sanctum')->id();
         $locale  = data_get(Language::languagesList()->where('default', 1)->first(), 'locale');
 
-        /** @var Cart $cart */
         $cart = $this->model()
             ->with([
                 'shop:id',
                 'shop.bonus',
                 'userCarts.cartDetails',
             ])
-            ->where(fn($q) => $q->where('id', $cartId)->orWhere('owner_id', $userId))
+            ->when($cartId, fn($q) => $q->where('id', $cartId))
+            ->when($userId, fn($q) => $q->where('owner_id', $userId))
             ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
             ->first();
 
@@ -49,6 +49,7 @@ class CartRepository extends CoreRepository
             return $cart;
         }
 
+        /** @var Cart $cart */
         (new CartService)->calculateTotalPrice($cart);
 
         $cart = $this->model()->with([
@@ -62,7 +63,8 @@ class CartRepository extends CoreRepository
             'userCarts.cartDetails.children.stock.stockExtras.group.translation' => fn($q) => $q
                 ->where('locale', $this->language)->orWhere('locale', $locale),
         ])
-            ->where(fn($q) => $q->where('id', $cartId)->orWhere('owner_id', $userId))
+            ->when($cartId, fn($q) => $q->where('id', $cartId))
+            ->when($userId, fn($q) => $q->where('owner_id', $userId))
             ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
             ->first();
 
@@ -136,10 +138,10 @@ class CartRepository extends CoreRepository
 
         foreach ($cart->userCarts as $userCart) {
 
-            if ($userCart?->cartDetails?->count() === 0) {
-                $userCart->delete();
-                continue;
-            }
+//            if ($userCart?->cartDetails?->count() === 0) {
+//                $userCart->delete();
+//                continue;
+//            }
 
             foreach ($userCart->cartDetails as $cartDetail) {
 

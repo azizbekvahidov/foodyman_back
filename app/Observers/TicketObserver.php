@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Models\Ticket;
+use App\Services\ModelLogService\ModelLogService;
 use Illuminate\Support\Str;
 
 class TicketObserver
@@ -13,7 +14,7 @@ class TicketObserver
      * @param Ticket $ticket
      * @return void
      */
-    public function creating(Ticket $ticket)
+    public function creating(Ticket $ticket): void
     {
         $ticket->uuid = Str::uuid();
     }
@@ -24,9 +25,9 @@ class TicketObserver
      * @param Ticket $ticket
      * @return void
      */
-    public function created(Ticket $ticket)
+    public function created(Ticket $ticket): void
     {
-        //
+        (new ModelLogService)->logging($ticket, $ticket->getAttributes(), 'created');
     }
 
     /**
@@ -35,9 +36,9 @@ class TicketObserver
      * @param Ticket $ticket
      * @return void
      */
-    public function updated(Ticket $ticket)
+    public function updated(Ticket $ticket): void
     {
-        //
+        (new ModelLogService)->logging($ticket, $ticket->getAttributes(), 'updated');
     }
 
     /**
@@ -46,9 +47,9 @@ class TicketObserver
      * @param Ticket $ticket
      * @return void
      */
-    public function deleted(Ticket $ticket)
+    public function deleted(Ticket $ticket): void
     {
-        //
+        (new ModelLogService)->logging($ticket, $ticket->getAttributes(), 'deleted');
     }
 
     /**
@@ -57,8 +58,8 @@ class TicketObserver
      * @param Ticket $ticket
      * @return void
      */
-    public function restored(Ticket $ticket)
+    public function restored(Ticket $ticket): void
     {
-        //
+        (new ModelLogService)->logging($ticket, $ticket->getAttributes(), 'restored');
     }
 }

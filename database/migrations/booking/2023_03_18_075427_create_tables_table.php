@@ -17,8 +17,9 @@ class CreateTablesTable extends Migration
             $table->id();
             $table->string('name')->nullable();
             $table->foreignId('shop_section_id')->constrained()->cascadeOnUpdate()->cascadeOnDelete();
-            $table->integer('tax')->nullable();
             $table->smallInteger('chair_count')->nullable();
+            $table->double('tax')->default(1)->nullable();
+            $table->boolean('active')->default(true);
             $table->timestamps();
             $table->softDeletes();
         });

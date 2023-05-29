@@ -13,8 +13,6 @@ use App\Models\Subscription;
 use Exception;
 use Http;
 use Illuminate\Database\Eloquent\Model;
-use Paytabscom\Laravel_paytabs\paypage;
-use Paytabscom\Laravel_paytabs\PaytabsApi;
 use Str;
 use Throwable;
 
@@ -61,26 +59,34 @@ class PayTabsService extends BaseService
 //        }
 
         $data = [
-            'profile_id'        => data_get($payload, 'profile_id'),
-            'tran_type'         => 'sale',
-            'tran_class'        => 'ecom',
-            'cart_currency'     => $currency,
-            'cart_amount'       => $totalPrice,
-            'paypage_lang'      => $this->language,
-
-            'callback'          => '',
-            'return'            => "$host/order-stripe-success?order_id=$order->id",
+            'amount'                    => $totalPrice,
+            'currency'                  => $currency,
+            'site_url'                  => config('app.front_url'),
+            'return_url'                => "$host/order-razorpay-success?order_id=$order->id",
+            'cancel_url'                => "$host/order-razorpay-success?order_id=$order->id",
+            'max_amount'                => $totalPrice,
+            'min_amount'                => $totalPrice,
+            'consumers_email'           => $order->user?->email,
+            'consumers_full_name'       => $order->username ?? "{$order->user?->firstname} {$order->user?->lastname}",
+            'consumers_phone_number'    => $order->phone ?? $order->user?->phone,
+            'address_shipping'          => data_get($order->address, 'address'),
         ];
 
-//        $pay = paypage::getInstance(
-//            'en',
-//            data_get($payload, 'profile_id'),
-//            data_get($payload, 'server_key')
-//        )
-//            ->create_pay_page($data);
+        $request = Http::withHeaders($headers)->post('https://secure.paytabs.sa/payment/request', [
+            'merchant_id'       => '105345',
+            'secret_key'        => 'SZJN6JRB6R-JGGWW29DD9-RWKLJNWNGR',
+            'site_url'          => config('app.front_url'),
+            'return_url'        => "$host/order-razorpay-success?order_id=$order->id",
+            'cc_first_name'     => $order->username ?? $order->user?->firstname,
+            'cc_last_name'      => $order->username ?? $order->user?->lastname,
+            'cc_phone_number'   => $order->phone ?? $order->user?->phone,
+            'cc_email'          => $order->user?->email,
+            'amount'            => $totalPrice,
+            'currency'          => $currency,
+            'msg_lang'          => $this->language,
+        ]);
 
-        $request = Http::withHeaders($headers)->post('https://secure.paytabs.com/payment/request', $data);
-
+        dd($request);
         $body = json_decode($request->body());
 
         dd($body);

@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
@@ -26,6 +27,7 @@ use Illuminate\Support\Carbon;
  * @property int $user_id
  * @property string $delivery_type
  * @property int $rate_delivery_fee
+ * @property int $rate_waiter_fee
  * @property double $total_price
  * @property int $currency_id
  * @property int $rate
@@ -47,6 +49,12 @@ use Illuminate\Support\Carbon;
  * @property string|null $username
  * @property string|null $img
  * @property boolean|null $current
+ * @property float|null $waiter_fee
+ * @property int|null $waiter_id
+ * @property int|null $cook_id
+ * @property int|null $table_id
+ * @property int|null $booking_id
+ * @property int|null $user_booking_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
@@ -56,6 +64,7 @@ use Illuminate\Support\Carbon;
  * @property-read double $order_details_sum_discount
  * @property-read int $rate_tax
  * @property-read Currency|null $currency
+ * @property-read UserAddress|null $myAddress
  * @property-read OrderCoupon|null $coupon
  * @property-read Collection|OrderDetail[] $orderDetails
  * @property-read int|null $order_details_count
@@ -73,32 +82,37 @@ use Illuminate\Support\Carbon;
  * @property-read User $user
  * @property-read Shop $shop
  * @property-read User $deliveryMan
+ * @property-read User $waiter
+ * @property-read User $cook
  * @property-read Collection|Gallery[] $galleries
  * @property-read int|null $galleries_count
+ * @property-read Collection|ModelLog[] $logs
+ * @property-read int|null $logs_count
  * @method static OrderFactory factory(...$parameters)
- * @method static Builder|Order filter($array)
- * @method static Builder|Order newModelQuery()
- * @method static Builder|Order newQuery()
- * @method static Builder|Order query()
- * @method static Builder|Order updatedDate($updatedDate)
- * @method static Builder|Order whereCommissionFee($value)
- * @method static Builder|Order whereCreatedAt($value)
- * @method static Builder|Order whereCurrencyId($value)
- * @method static Builder|Order whereDeletedAt($value)
- * @method static Builder|Order whereDeliveryDate($value)
- * @method static Builder|Order whereDeliveryFee($value)
- * @method static Builder|Order whereDeliveryTime($value)
- * @method static Builder|Order whereDeliveryman($value)
- * @method static Builder|Order whereId($value)
- * @method static Builder|Order whereNote($value)
- * @method static Builder|Order whereTotalPrice($value)
- * @method static Builder|Order whereRate($value)
- * @method static Builder|Order whereShopId($value)
- * @method static Builder|Order whereStatus($value)
- * @method static Builder|Order whereTax($value)
- * @method static Builder|Order whereTotalDiscount($value)
- * @method static Builder|Order whereUpdatedAt($value)
- * @method static Builder|Order whereUserId($value)
+ * @method static Builder|self filter($array)
+ * @method static Builder|self newModelQuery()
+ * @method static Builder|self newQuery()
+ * @method static Builder|self query()
+ * @method static Builder|self updatedDate($updatedDate)
+ * @method static Builder|self whereCommissionFee($value)
+ * @method static Builder|self whereCreatedAt($value)
+ * @method static Builder|self whereCurrencyId($value)
+ * @method static Builder|self whereAddressId($value)
+ * @method static Builder|self whereDeletedAt($value)
+ * @method static Builder|self whereDeliveryDate($value)
+ * @method static Builder|self whereDeliveryFee($value)
+ * @method static Builder|self whereDeliveryTime($value)
+ * @method static Builder|self whereDeliveryman($value)
+ * @method static Builder|self whereId($value)
+ * @method static Builder|self whereNote($value)
+ * @method static Builder|self whereTotalPrice($value)
+ * @method static Builder|self whereRate($value)
+ * @method static Builder|self whereShopId($value)
+ * @method static Builder|self whereStatus($value)
+ * @method static Builder|self whereTax($value)
+ * @method static Builder|self whereTotalDiscount($value)
+ * @method static Builder|self whereUpdatedAt($value)
+ * @method static Builder|self whereUserId($value)
  * @mixin Eloquent
  */
 class Order extends Model
@@ -114,6 +128,7 @@ class Order extends Model
 
     const STATUS_NEW        = 'new';
     const STATUS_ACCEPTED   = 'accepted';
+    const STATUS_COOKING    = 'cooking';
     const STATUS_READY      = 'ready';
     const STATUS_ON_A_WAY   = 'on_a_way';
     const STATUS_DELIVERED  = 'delivered';
@@ -122,6 +137,7 @@ class Order extends Model
     const STATUSES = [
         self::STATUS_NEW        => self::STATUS_NEW,
         self::STATUS_ACCEPTED   => self::STATUS_ACCEPTED,
+        self::STATUS_COOKING    => self::STATUS_COOKING,
         self::STATUS_READY      => self::STATUS_READY,
         self::STATUS_ON_A_WAY   => self::STATUS_ON_A_WAY,
         self::STATUS_DELIVERED  => self::STATUS_DELIVERED,
@@ -130,15 +146,22 @@ class Order extends Model
 
     const PICKUP    = 'pickup';
     const DELIVERY  = 'delivery';
+    const DINE_IN   = 'dine_in';
 
     const DELIVERY_TYPES = [
         self::PICKUP   => self::PICKUP,
         self::DELIVERY => self::DELIVERY,
+        self::DINE_IN  => self::DINE_IN,
     ];
 
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class)->withTrashed();
+    }
+
+    public function myAddress(): BelongsTo
+    {
+        return $this->belongsTo(UserAddress::class, 'address_id')->withTrashed();
     }
 
     public function shop(): BelongsTo
@@ -166,6 +189,16 @@ class Order extends Model
         return $this->belongsTo(User::class, 'deliveryman')->withTrashed();
     }
 
+    public function cook(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cook_id')->withTrashed();
+    }
+
+    public function waiter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'waiter_id')->withTrashed();
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class)->withTrashed();
@@ -189,6 +222,11 @@ class Order extends Model
     public function orderRefunds(): HasMany
     {
         return $this->hasMany(OrderRefund::class)->withTrashed();
+    }
+
+    public function logs(): MorphMany
+    {
+        return $this->morphMany(ModelLog::class, 'model');
     }
 
     public function getRateTotalPriceAttribute(): ?float
@@ -218,6 +256,15 @@ class Order extends Model
         return $this->delivery_fee;
     }
 
+    public function getRateWaiterFeeAttribute(): ?float
+    {
+        if (request()->is('api/v1/dashboard/user/*') || request()->is('api/v1/rest/*')) {
+            return $this->waiter_fee * $this->rate;
+        }
+
+        return $this->waiter_fee;
+    }
+
     public function getRateTaxAttribute(): ?float
     {
         if (request()->is('api/v1/dashboard/user/*') || request()->is('api/v1/rest/*')) {
@@ -238,7 +285,7 @@ class Order extends Model
 
     public function getSellerPriceAttribute(): ?float
     {
-        return $this->total_price - $this->delivery_fee - $this->commission_fee;
+        return $this->total_price - $this->delivery_fee - $this->waiter_fee - $this->commission_fee;
     }
 
     /**
@@ -259,12 +306,21 @@ class Order extends Model
      */
     public function scopeFilter($query, $filter): void
     {
-        $orderByStatuses = is_array(data_get($filter, 'statuses')) ?
-            array_intersect(OrderStatus::listNames(), data_get($filter, 'statuses')) :
-            [];
+        $orderByStatuses = [];
+
+        if (is_array(data_get($filter, 'statuses'))) {
+
+            $orderStatuses = OrderStatus::listNames();
+
+            if (count($orderStatuses) === 0) {
+                $orderStatuses = self::STATUSES;
+            }
+
+            $orderByStatuses = array_intersect($orderStatuses, data_get($filter, 'statuses'));
+        }
 
         $query
-            ->when(data_get($filter, 'isset-deliveryman'), function ($q) use($filter) {
+            ->when(data_get($filter, 'isset-deliveryman'), function ($q) {
                 $q->whereHas('deliveryMan');
             })
             ->when(data_get($filter, 'search'), function ($q, $search) {
@@ -288,6 +344,8 @@ class Order extends Model
                 $q->whereIn('shop_id', is_array($shopIds) ? $shopIds : []);
             })
             ->when(data_get($filter, 'user_id'), fn($q, $userId) => $q->where('user_id', $userId))
+            ->when(data_get($filter, 'waiter_id'), fn($q, $waiterId) => $q->where('waiter_id', $waiterId))
+            ->when(data_get($filter, 'cook_id'), fn($q, $cookId) => $q->where('cook_id', $cookId))
             ->when(data_get($filter, 'delivery_type'), fn($q, $deliveryType) => $q->where('delivery_type', $deliveryType))
             ->when(data_get($filter, 'date_from'), function (Builder $query, $dateFrom) use ($filter) {
 
@@ -318,20 +376,20 @@ class Order extends Model
                 fn($q) => $q->where('status', data_get($filter, 'status'))
             )
             ->when(data_get($filter, 'deliveryman'), fn(Builder $q, $deliveryman) =>
-                $q->whereHas('deliveryMan', function ($q) use($deliveryman) {
-                    $q->where('id', $deliveryman);
-                })
+            $q->whereHas('deliveryMan', function ($q) use($deliveryman) {
+                $q->where('id', $deliveryman);
+            })
             )
             ->when(data_get($filter, 'empty-deliveryman'), fn(Builder $q) => $q->where(function ($b) {
-                    $b->whereNull('deliveryman')
-                        ->orWhere('deliveryman', '=', null)
-                        ->orWhere('deliveryman', '=', 0);
-                })
+                $b->whereNull('deliveryman')
+                    ->orWhere('deliveryman', '=', null)
+                    ->orWhere('deliveryman', '=', 0);
+            })
             )
             ->when(isset($filter['current']), fn($q) => $q->where('current', $filter['current']))
             ->when(isset($filter['deleted_at']), fn($q) => $q->onlyTrashed())
             ->when(count($orderByStatuses) > 0, fn($q) => $q->whereIn('status', $orderByStatuses))
-            ->when(data_get($filter, 'order_statuses'), function ($q) use($orderByStatuses) {
+            ->when(data_get($filter, 'order_statuses'), function ($q) {
                 $q->orderByRaw(
                     DB::raw("FIELD(status, 'new', 'accepted', 'ready', 'on_a_way',  'delivered', 'canceled') ASC")
                 );

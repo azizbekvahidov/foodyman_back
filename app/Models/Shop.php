@@ -49,6 +49,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
  * @property string|null $mark
+ * @property int|null $service_fee
  * @property int|null $type
  * @property array|null $delivery_time
  * @property-read Collection|Gallery[] $galleries
@@ -83,6 +84,8 @@ use Illuminate\Support\Carbon;
  * @property float|null $avg_rate
  * @property-read Bonus|null $bonus
  * @property-read ShopDeliverymanSetting|null $shopDeliverymanSetting
+ * @property-read Collection|ModelLog[] $logs
+ * @property-read int|null $logs_count
  * @method static ShopFactory factory(...$parameters)
  * @method static Builder|Shop filter($filter)
  * @method static Builder|Shop newModelQuery()
@@ -223,7 +226,7 @@ class Shop extends Model
         return $this->hasOne(ShopTranslation::class);
     }
 
-    public function ShopDeliverymanSetting(): HasOne
+    public function shopDeliverymanSetting(): HasOne
     {
         return $this->hasOne(ShopDeliverymanSetting::class);
     }
@@ -284,6 +287,11 @@ class Shop extends Model
         return $this->belongsToMany(Category::class, 'shop_categories', 'shop_id', 'category_id');
     }
 
+    public function logs(): MorphMany
+    {
+        return $this->morphMany(ModelLog::class, 'model');
+    }
+
     public function scopeUpdatedDate($query, $updatedDate)
     {
         $query->where('updated_at', '>', $updatedDate);
@@ -291,6 +299,41 @@ class Shop extends Model
 
     public function scopeFilter($query, $filter)
     {
+        $orders  = [];
+
+        if (data_get($filter, 'address.latitude') && data_get($filter, 'address.longitude')) {
+            DeliveryZone::list()->map(function (DeliveryZone $deliveryZone) use ($filter, &$orders) {
+
+                if (!$deliveryZone->shop_id) {
+                    return null;
+                }
+
+                $shop       = $deliveryZone->shop;
+
+                $location   = data_get($deliveryZone->shop, 'location', []);
+
+                $km         = (new Utility)->getDistance($location, data_get($filter, 'address', []));
+                $rate       = data_get($filter, 'currency.rate', 1);
+
+                $orders[$deliveryZone->shop_id] = (new Utility)->getPriceByDistance($km, $shop, $rate);
+
+                if (
+                    Utility::pointInPolygon(data_get($filter, 'address'), $deliveryZone->address)
+                    && $orders[$deliveryZone->shop_id] > 0
+                ) {
+                    return $deliveryZone->shop_id;
+                }
+
+                unset($orders[$deliveryZone->shop_id]);
+
+                return null;
+            })
+                ->reject(fn($data) => empty($data))
+                ->toArray();
+
+            asort($orders);
+        }
+
         $query
             ->when(data_get($filter, 'user_id'), function ($q, $userId) {
                 $q->where('user_id', $userId);
@@ -327,54 +370,25 @@ class Shop extends Model
                     $q->where('end', '>=', now())->where('active', 1);
                 });
             })
-            ->when(data_get($filter, 'address'), function ($query) use ($filter) {
-                $orderByIds = [];
-                $orderBys = ['new', 'old', 'best_sale', 'low_sale', 'high_rating', 'low_rating', 'trust_you'];
-
-                $query->whereHas('deliveryZone', function ($q) use ($filter, &$orderByIds) {
-
-                    $orders = [];
-
-                    $shopIds = DeliveryZone::list()->map(function (DeliveryZone $deliveryZone) use ($filter, &$orders) {
-
-                        if (!$deliveryZone->shop_id) {
-                            return null;
-                        }
-
-                        $shop       = $deliveryZone->shop;
-
-                        $location   = data_get($deliveryZone->shop, 'location', []);
-
-                        $km         = (new Utility)->getDistance($location, data_get($filter, 'address', []));
-                        $rate       = data_get($filter, 'currency.rate', 1);
-
-                        $orders[$deliveryZone->shop_id] = (new Utility)->getPriceByDistance($km, $shop, $rate);
-
-                        if (
-                            Utility::pointInPolygon(data_get($filter, 'address'), $deliveryZone->address)
-                            && $orders[$deliveryZone->shop_id] > 0
-                        ) {
-                            return $deliveryZone->shop_id;
-                        }
-
-                        unset($orders[$deliveryZone->shop_id]);
-
-                        return null;
-                    })
-                        ->reject(fn($data) => empty($data))
-                        ->toArray();
-
-                    // Что бы отсортировать по наименьшей цене нужны значения,
-                    // далее для фильтра берём только ключи(shop_id) array_keys($orders)
-                    asort($orders);
-
-                    $orderByIds = implode(', ', array_keys($orders));
-
-                    $q->whereIn('shop_id', $shopIds);
-
-                })->when($orderByIds, fn($builder) => !in_array(data_get($filter, 'order_by'), $orderBys) ?
-                    $builder->orderByRaw(DB::raw("FIELD(shops.id, $orderByIds) ASC")) : $builder
+            ->when(data_get($filter, 'work_24_7'), function (Builder $query) {
+                $query->whereHas('workingDays', fn($q) => $q
+                    ->where('from', '01-00')
+                    ->where('to', '>=', '23-00')
                 );
+            })
+            ->when(data_get($filter, 'address'), function ($query) use ($filter, $orders) {
+                $orderBys = ['new', 'old', 'best_sale', 'low_sale', 'high_rating', 'low_rating', 'trust_you'];
+                $orderByIds = implode(', ', array_keys($orders));
+
+                $query
+                    ->whereHas('deliveryZone')
+                    ->when($orderByIds, function ($builder) use ($orderBys, $filter, $orderByIds) {
+
+                        if (!in_array(data_get($filter, 'order_by'), $orderBys)) {
+                            $builder->orderByRaw(DB::raw("FIELD(shops.id, $orderByIds) ASC"));
+                        }
+
+                    });
 
             })
             ->when(data_get($filter, 'search'), function ($query, $search) {

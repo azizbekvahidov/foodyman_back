@@ -35,6 +35,25 @@ class OrderService extends CoreService implements OrderServiceInterface
      */
     public function create(array $data): array
     {
+        if (data_get($data, 'table_id')) {
+
+            $order = Order::select([
+                'status',
+                'table_id'
+            ])
+            ->where([
+                'status'    => Order::STATUS_NEW,
+                'table_id'  => $data['table_id']
+            ])
+            ->first();
+
+            if (!empty($order)) {
+                /** @var Order $order */
+                return $this->update($order->id, $data);
+            }
+
+        }
+
         try {
             $order = DB::transaction(function () use ($data) {
 
@@ -117,7 +136,7 @@ class OrderService extends CoreService implements OrderServiceInterface
 
                 }
 
-                $order = (new OrderDetailService)->create($order, data_get($data, 'products', []));
+                $order = (new OrderDetailService)->update($order, data_get($data, 'products', []));
 
                 $this->calculateOrder($order, $shop, $data);
 
@@ -164,14 +183,15 @@ class OrderService extends CoreService implements OrderServiceInterface
         $totalPrice     = $order->orderDetails->sum('total_price');
         $totalDiscount  = $order->orderDetails->sum('discount');
 
-        $shopTax        = max($totalPrice / 100 * $shop?->tax, 0);
-        $totalPrice     += ($order->delivery_fee + $shopTax);
-
         $coupon = Coupon::checkCoupon(data_get($data, 'coupon'))->first();
 
         if ($coupon) {
             $totalPrice -= $this->checkCoupon($coupon, $order, $totalPrice);
         }
+
+        $shopTax        = max($totalPrice / 100 * $shop?->tax, 0);
+
+        $totalPrice     += ($order->delivery_fee + $shopTax);
 
         $totalDiscount += $this->recalculateReceipt($order);
 
@@ -183,11 +203,18 @@ class OrderService extends CoreService implements OrderServiceInterface
             max(($totalPrice / 100 * $shop?->percentage <= 0.99 ? 1 : $shop?->percentage), 0)
             : 0;
 
+        $waiterFeeRate = $order->waiter_fee;
+
+        if ($order->delivery_type === Order::DINE_IN) {
+            $waiterFeeRate = $totalPrice / 100 * $shop->service_fee;
+        }
+
         $order->update([
             'total_price'       => $totalPrice,
             'commission_fee'    => $commissionFee,
             'total_discount'    => max($totalDiscount, 0),
-            'tax'               => $shopTax
+            'tax'               => $shopTax,
+            'waiter_fee'        => $waiterFeeRate
         ]);
 
         $isSubscribe = (int)Settings::adminSettings()->where('key', 'by_subscription')->first()?->value;
@@ -254,7 +281,7 @@ class OrderService extends CoreService implements OrderServiceInterface
                 ];
             }
 
-            if ($order->delivery_type === Order::PICKUP) {
+            if ($order->delivery_type !== Order::DELIVERY) {
                 return [
                     'status'  => false,
                     'code'    => ResponseError::ERROR_502,
@@ -289,7 +316,8 @@ class OrderService extends CoreService implements OrderServiceInterface
                 is_array($user->firebase_token) ? $user->firebase_token : [$user->firebase_token],
                 __('errors.' . ResponseError::NEW_ORDER, ['id' => $order->id], $this->language),
                 $order->id,
-                (new NotificationHelper)->deliveryManOrder($order, $this->language, 'new_order')
+                (new NotificationHelper)->deliveryManOrder($order, $this->language, 'new_order'),
+                [$user->id]
             );
 
             return [
@@ -318,7 +346,7 @@ class OrderService extends CoreService implements OrderServiceInterface
             /** @var Order $order */
             $order = Order::with('user')->find($id);
 
-            if ($order->delivery_type === Order::PICKUP) {
+            if ($order->delivery_type !== Order::DELIVERY) {
                 return [
                     'status'  => false,
                     'code'    => ResponseError::ERROR_502,
@@ -357,6 +385,233 @@ class OrderService extends CoreService implements OrderServiceInterface
     }
 
     /**
+     * @param int $orderId
+     * @param int $waiterId
+     * @param int|null $shopId
+     * @return array
+     */
+    public function updateWaiter(int $orderId, int $waiterId, int|null $shopId = null): array
+    {
+        try {
+            /** @var Order $order */
+            $waiter = User::with(['roles'])
+                ->when($shopId, fn($q) => $q->whereHas('invitations', fn($q) => $q->where('shop_id', $shopId)))
+                ->find($waiterId);
+
+            $order = Order::with('user')
+                ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
+                ->find($orderId);
+
+            if (!$order) {
+                return [
+                    'status'  => false,
+                    'code'    => ResponseError::ERROR_404,
+                    'message' => __('errors.' . ResponseError::ERROR_404, locale: $this->language)
+                ];
+            }
+
+            if ($order->delivery_type !== Order::DINE_IN) {
+                return [
+                    'status'  => false,
+                    'code'    => ResponseError::ERROR_502,
+                    'message' => __('errors.' . ResponseError::ORDER_PICKUP, locale: $this->language)
+                ];
+            }
+
+            if (!$waiter || !$waiter->hasRole('waiter')) {
+                return [
+                    'status'  => false,
+                    'code'    => ResponseError::ERROR_211,
+                    'message' => __('errors.' . ResponseError::ERROR_211, locale: $this->language)
+                ];
+            }
+
+            /** @var User $waiter */
+            if (!$waiter->invitations?->where('shop_id', $order->shop_id)?->first()?->id) {
+                return [
+                    'status'  => false,
+                    'code'    => ResponseError::ERROR_212,
+                    'message' => __('errors.' . ResponseError::ERROR_212, locale: $this->language)
+                ];
+            }
+
+            $order->update([
+                'waiter_id' => $waiter->id,
+            ]);
+
+            return ['status' => true, 'message' => ResponseError::NO_ERROR, 'data' => $order];
+        } catch (Throwable) {
+            return [
+                'status'  => false,
+                'code'    => ResponseError::ERROR_502,
+                'message' => __('errors.' . ResponseError::ERROR_502, locale: $this->language)
+            ];
+        }
+    }
+
+    /**
+     * @param int $orderId
+     * @param int $cookId
+     * @param int|null $shopId
+     * @return array
+     */
+    public function updateCook(int $orderId, int $cookId, int|null $shopId = null): array
+    {
+        try {
+            /** @var Order $order */
+            $cook = User::with(['roles'])
+                ->when($shopId, fn($q) => $q->whereHas('invitations', fn($q) => $q->where('shop_id', $shopId)))
+                ->find($cookId);
+
+            $order = Order::with('user')
+                ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
+                ->find($orderId);
+
+            if (!$order) {
+                return [
+                    'status'  => false,
+                    'code'    => ResponseError::ERROR_404,
+                    'message' => __('errors.' . ResponseError::ERROR_404, locale: $this->language)
+                ];
+            }
+
+            if ($order->delivery_type !== Order::DINE_IN) {
+                return [
+                    'status'  => false,
+                    'code'    => ResponseError::ERROR_502,
+                    'message' => __('errors.' . ResponseError::ORDER_PICKUP, locale: $this->language)
+                ];
+            }
+
+            if (!$cook || !$cook->hasRole('cook')) {
+                return [
+                    'status'  => false,
+                    'code'    => ResponseError::ERROR_211,
+                    'message' => __('errors.' . ResponseError::ERROR_211, locale: $this->language)
+                ];
+            }
+
+            /** @var User $cook */
+            if (!$cook->invitations?->where('shop_id', $order->shop_id)?->first()?->id) {
+                return [
+                    'status'  => false,
+                    'code'    => ResponseError::ERROR_212,
+                    'message' => __('errors.' . ResponseError::ERROR_212, locale: $this->language)
+                ];
+            }
+
+            $order->update([
+                'cook_id' => $cook->id,
+            ]);
+
+            return ['status' => true, 'message' => ResponseError::NO_ERROR, 'data' => $order];
+        } catch (Throwable) {
+            return [
+                'status'  => false,
+                'code'    => ResponseError::ERROR_502,
+                'message' => __('errors.' . ResponseError::ERROR_502, locale: $this->language)
+            ];
+        }
+    }
+
+    /**
+     * @param int|null $id
+     * @return array
+     */
+    public function attachWaiter(?int $id): array
+    {
+        try {
+            /** @var Order $order */
+            $order = Order::with('user')->find($id);
+
+            if ($order->delivery_type !== Order::DINE_IN) {
+                return [
+                    'status'  => false,
+                    'code'    => ResponseError::ERROR_502,
+                    'message' => __('errors.' . ResponseError::ORDER_PICKUP, locale: $this->language)
+                ];
+            }
+
+            if (!empty($order->waiter_id)) {
+                return [
+                    'status'  => false,
+                    'code'    => ResponseError::WAITER_NOT_EMPTY,
+                    'message' => __('errors.' . ResponseError::WAITER_NOT_EMPTY, locale: $this->language)
+                ];
+            }
+
+            if (!auth('sanctum')->user()?->invitations?->where('shop_id', $order->shop_id)?->first()?->id) {
+                return [
+                    'status'  => false,
+                    'code'    => ResponseError::ERROR_212,
+                    'message' => __('errors.' . ResponseError::ERROR_212, locale: $this->language)
+                ];
+            }
+
+            $order->update([
+                'waiter_id' => auth('sanctum')->id(),
+            ]);
+
+            return ['status' => true, 'message' => ResponseError::NO_ERROR, 'data' => $order];
+        } catch (Throwable) {
+            return [
+                'status'  => false,
+                'code'    => ResponseError::ERROR_502,
+                'message' => __('errors.' . ResponseError::ERROR_502, locale: $this->language)
+            ];
+        }
+    }
+
+
+    /**
+     * @param int|null $id
+     * @return array
+     */
+    public function attachCook(?int $id): array
+    {
+        try {
+            /** @var Order $order */
+            $order = Order::with('user')->find($id);
+
+            if ($order->delivery_type !== Order::DINE_IN) {
+                return [
+                    'status'  => false,
+                    'code'    => ResponseError::ERROR_502,
+                    'message' => __('errors.' . ResponseError::ORDER_PICKUP, locale: $this->language)
+                ];
+            }
+
+            if (!empty($order->cook_id)) {
+                return [
+                    'status'  => false,
+                    'code'    => ResponseError::COOKER_NOT_EMPTY,
+                    'message' => __('errors.' . ResponseError::COOKER_NOT_EMPTY, locale: $this->language)
+                ];
+            }
+
+            if (!auth('sanctum')->user()?->invitations?->where('shop_id', $order->shop_id)?->first()?->id) {
+                return [
+                    'status'  => false,
+                    'code'    => ResponseError::ERROR_212,
+                    'message' => __('errors.' . ResponseError::ERROR_212, locale: $this->language)
+                ];
+            }
+
+            $order->update([
+                'cook_id' => auth('sanctum')->id(),
+            ]);
+
+            return ['status' => true, 'message' => ResponseError::NO_ERROR, 'data' => $order];
+        } catch (Throwable) {
+            return [
+                'status'  => false,
+                'code'    => ResponseError::ERROR_502,
+                'message' => __('errors.' . ResponseError::ERROR_502, locale: $this->language)
+            ];
+        }
+    }
+
+    /**
      * @param array $data
      * @param Shop $shop
      * @return array
@@ -366,17 +621,22 @@ class OrderService extends CoreService implements OrderServiceInterface
         $defaultCurrencyId = Currency::whereDefault(1)->first('id');
 
         $currencyId  = data_get($data, 'currency_id', data_get($defaultCurrencyId, 'id'));
+        $deliveryFeeRate = 0;
+        $waiterFeeRate   = 0;
 
-        $helper      = new Utility;
-        $km          = $helper->getDistance($shop->location, data_get($data, 'location'));
+        if (data_get($data, 'location') && data_get($data, 'delivery_type') === Order::DELIVERY) {
+            $helper      = new Utility;
+            $km          = $helper->getDistance($shop->location, data_get($data, 'location'));
 
-        $deliveryFee = $helper->getPriceByDistance($km, $shop, (float)data_get($data, 'rate', 1));
+            $deliveryFee = $helper->getPriceByDistance($km, $shop, (float)data_get($data, 'rate', 1));
 
-        $deliveryFeeRate = data_get($data, 'delivery_type') === Order::DELIVERY ?
-            $deliveryFee / data_get($data, 'rate') : 0;
+            $deliveryFeeRate = $deliveryFee / data_get($data, 'rate');
+        }
 
         return [
             'user_id'               => data_get($data, 'user_id', auth('sanctum')->id()),
+            'waiter_id'             => data_get($data, 'waiter_id'),
+            'cook_id'               => data_get($data, 'cook_id'),
             'total_price'           => 0,
             'currency_id'           => $currencyId,
             'rate'                  => data_get($data, 'rate'),
@@ -388,9 +648,11 @@ class OrderService extends CoreService implements OrderServiceInterface
             'commission_fee'        => 0,
             'status'                => data_get($data, 'status', 'new'),
             'delivery_fee'          => max($deliveryFeeRate, 0),
+            'waiter_fee'            => max($waiterFeeRate, 0),
             'delivery_type'         => data_get($data, 'delivery_type'),
             'location'              => data_get($data, 'location'),
             'address'               => data_get($data, 'address'),
+            'address_id'            => data_get($data, 'address_id'),
             'deliveryman'           => data_get($data, 'deliveryman'),
             'delivery_date'         => data_get($data, 'delivery_date'),
             'delivery_time'         => data_get($data, 'delivery_time'),

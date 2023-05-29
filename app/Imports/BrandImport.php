@@ -20,7 +20,7 @@ class BrandImport extends BaseImport implements ToCollection, WithHeadingRow, Wi
      */
     public function collection(Collection $collection)
     {
-        if (!Cache::get('gdfjetjb.rldf') || data_get(Cache::get('gdfjetjb.rldf'), 'active') != 1) {
+        if (!Cache::get('tytkjbjkfr.reprijvbv') || data_get(Cache::get('tytkjbjkfr.reprijvbv'), 'active') != 1) {
             abort(403);
         }
         foreach ($collection as $row) {

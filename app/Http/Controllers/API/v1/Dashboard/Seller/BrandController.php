@@ -125,7 +125,7 @@ class BrandController extends SellerBaseController
      */
     public function brandsSearch(Request $request): AnonymousResourceCollection
     {
-        $brands = $this->brandRepository->brandsSearch($request->input('search', ''));
+        $brands = $this->brandRepository->brandsSearch($request->all());
 
         return BrandResource::collection($brands);
     }
@@ -171,10 +171,10 @@ class BrandController extends SellerBaseController
             Excel::import(new BrandImport, $request->file('file'));
 
             return $this->successResponse('Successfully imported');
-        } catch (Exception) {
+        } catch (Exception $e) {
             return $this->errorResponse(
                 ResponseError::ERROR_508,
-                'Excel format incorrect or data invalid'
+                __('errors.' . ResponseError::ERROR_508, locale: $this->language) . ' | ' . $e->getMessage()
             );
         }
     }

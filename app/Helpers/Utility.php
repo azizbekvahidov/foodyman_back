@@ -100,24 +100,14 @@ class Utility
 
         foreach ($reviews as $review) {
 
-            switch (true) {
-                case data_get($review, 'rating') <= 1:
-                    $result[1] += data_get($review, 'count');
-                    break;
-                case data_get($review, 'rating') <= 2:
-                    $result[2] += data_get($review, 'count');
-                    break;
-                case data_get($review, 'rating') <= 3:
-                    $result[3] += data_get($review, 'count');
-                    break;
-                case data_get($review, 'rating') <= 4:
-                    $result[4] += data_get($review, 'count');
-                    break;
-                case data_get($review, 'rating') <= 5:
-                    $result[5] += data_get($review, 'count');
-                    break;
+            $rating = (int)data_get($review, 'rating');
+
+            if (data_get($result, $rating)) {
+                $result[$rating] += data_get($review, 'count');
+                continue;
             }
 
+            $result[$rating] = data_get($review, 'count');
         }
 
         return $result;

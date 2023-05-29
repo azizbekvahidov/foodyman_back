@@ -17,6 +17,9 @@ class ShopTagResource extends JsonResource
     public function toArray($request): array
     {
         /** @var ShopTag|JsonResource $this */
+        $locales = $this->relationLoaded('translations') ?
+            $this->translations->pluck('locale')->toArray() : null;
+
         return [
             'id'            => $this->when($this->id, $this->id),
             'img'           => $this->when($this->img, $this->img),
@@ -28,7 +31,7 @@ class ShopTagResource extends JsonResource
             'galleries'     => GalleryResource::collection($this->whenLoaded('galleries')),
             'translation'   => TranslationResource::make($this->whenLoaded('translation')),
             'translations'  => TranslationResource::collection($this->whenLoaded('translations')),
-            'locales'       => $this->whenLoaded('translations', $this->translations->pluck('locale')->toArray()),
+            'locales'       => $this->when($locales, $locales),
         ];
     }
 }

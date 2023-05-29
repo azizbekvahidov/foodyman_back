@@ -2,16 +2,21 @@
 
 namespace Database\Seeders;
 
+use App\Models\DeliveryManSetting;
 use App\Models\Language;
 use App\Models\Shop;
 use App\Models\ShopTag;
 use App\Models\ShopTranslation;
 use App\Models\User;
+use App\Traits\Loggable;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
+use Throwable;
 
 class UserSeeder extends Seeder
 {
+    use Loggable;
+
     /**
      * Run the database seeds.
      *
@@ -104,55 +109,121 @@ class UserSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'id' => 107,
+                'uuid' => Str::uuid(),
+                'firstname' => 'Waiter',
+                'lastname' => 'Waiter',
+                'email' => 'waiter@githubit.com',
+                'phone' => '9989119121245',
+                'birthday' => '1990-12-31',
+                'gender' => 'male',
+                'email_verified_at' => now(),
+                'password' => bcrypt('waiter'),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'id' => 108,
+                'uuid' => Str::uuid(),
+                'firstname' => 'Cook',
+                'lastname' => 'Cook',
+                'email' => 'cook@githubit.com',
+                'phone' => '9989119121241',
+                'birthday' => '1990-12-31',
+                'gender' => 'male',
+                'email_verified_at' => now(),
+                'password' => bcrypt('cook'),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ];
 
-        if (app()->environment() == 'local') {
-
-            foreach ($users as $user) {
+        foreach ($users as $user) {
+            try {
                 User::updateOrInsert(['id' => data_get($user, 'id')], $user);
+            } catch (Throwable $e) {
+                $this->error($e);
             }
-
-            User::find(101)->syncRoles('admin');
-            User::find(102)->syncRoles('user');
-            User::find(103)->syncRoles('seller');
-            User::find(104)->syncRoles('manager');
-            User::find(105)->syncRoles('moderator');
-            User::find(106)->syncRoles('deliveryman');
-
-            $shop = Shop::create([
-                'uuid'              => Str::uuid(),
-                'user_id'           => 103,
-                'location'          => [
-                    'latitude'          => -69.3453324,
-                    'longitude'         => 69.3453324,
-                ],
-                'phone'             => '+1234567',
-                'show_type'         => 1,
-                'open'              => 1,
-                'background_img'    => 'url.webp',
-                'logo_img'          => 'url.webp',
-                'status'            => 'approved',
-                'status_note'       => 'approved',
-                'mark'              => 'mark',
-                'delivery_time'     => [
-                    'from'              => '10',
-                    'to'                => '90',
-                    'type'              => 'minute',
-                ],
-                'type'              => 2,
-            ]);
-
-            ShopTranslation::create([
-                'shop_id'       => $shop->id,
-                'description'   => 'shop desc',
-                'title'         => 'shop title',
-                'locale'        => data_get(Language::languagesList()->first(), 'locale', 'en'),
-                'address'       => 'address',
-            ]);
-
-            $shop->tags()->sync(ShopTag::pluck('id')->toArray());
-
         }
+
+        User::find(101)->syncRoles('admin');
+
+        User::find(102)->syncRoles('user');
+
+        User::find(103)->syncRoles('seller');
+
+        User::find(104)->syncRoles('manager');
+
+        $moderator   = User::find(105)->syncRoles('moderator');
+
+        $deliveryman = User::find(106);
+
+        $deliveryman->deliveryManSetting()->updateOrCreate([
+            'user_id' => $deliveryman->id
+        ], [
+            'type_of_technique' => DeliveryManSetting::BENZINE,
+            'brand'             => 'BMW',
+            'model'             => 'M5 F90 competition',
+            'number'            => 'M111MM',
+            'color'             => '#000',
+            'online'            => 1,
+            'location'          => [
+                'latitude'  => 36.966428,
+                'longitude' => -95.844032,
+            ],
+        ]);
+
+        $deliveryman->syncRoles('deliveryman');
+
+        User::find(107)->syncRoles('waiter');
+
+        User::find(108)->syncRoles('cook');
+
+        $shop = Shop::updateOrCreate([
+            'user_id'           => 103,
+        ],[
+            'uuid'              => Str::uuid(),
+            'location'          => [
+                'latitude'          => -69.3453324,
+                'longitude'         => 69.3453324,
+            ],
+            'phone'             => '+1234567',
+            'show_type'         => 1,
+            'open'              => 1,
+            'background_img'    => 'url.webp',
+            'logo_img'          => 'url.webp',
+            'status'            => 'approved',
+            'status_note'       => 'approved',
+            'mark'              => 'mark',
+            'delivery_time'     => [
+                'from'              => '10',
+                'to'                => '90',
+                'type'              => 'minute',
+            ],
+            'type'              => 2,
+        ]);
+
+        try {
+            $moderator->invitations()->withTrashed()->updateOrCreate([
+                'shop_id' => $shop->id,
+            ], [
+                'deleted_at' => null
+            ]);
+        } catch (Throwable $e) {
+            $this->error($e);
+        }
+
+        ShopTranslation::updateOrCreate([
+            'shop_id'       => $shop->id,
+            'locale'        => data_get(Language::languagesList()->first(), 'locale', 'en'),
+        ],[
+            'description'   => 'shop desc',
+            'title'         => 'shop title',
+            'address'       => 'address',
+        ]);
+
+        $shop->tags()->sync(ShopTag::pluck('id')->toArray());
 
     }
 

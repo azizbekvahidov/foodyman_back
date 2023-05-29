@@ -104,7 +104,7 @@ class UserController extends SellerBaseController
                         ->orWhere('phone', 'LIKE', '%' . $search . '%');
                 });
             })
-            ->when($request->input('role'), function ($query, $role) use ($request) {
+            ->when($request->input('role'), function ($query, $role) {
                 $query->whereHas('roles', function ($q) use ($role) {
                     $q->where('name', $role);
                 });
@@ -140,12 +140,11 @@ class UserController extends SellerBaseController
     public function getDeliveryman(FilterParamsRequest $request): AnonymousResourceCollection
     {
         $users = $this->model->with('roles')
-            ->whereHas('roles', function ($q) use ($request) {
+            ->whereHas('roles', function ($q) {
                 $q->where('name', 'deliveryman');
             })
-            ->whereDoesntHave('invite', function ($q) {
-                $q->where('shop_id', '!=', $this->shop->id)
-                    ->where('status', 3);
+            ->whereHas('invitations', function ($q) {
+                $q->where('shop_id', $this->shop->id);
             })
             ->when($request->input('search'), function ($q, $search) {
                 $q->where(function ($query) use ($search) {

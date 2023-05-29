@@ -20,7 +20,7 @@ class StockExport extends BaseExport implements FromCollection, WithHeadings
         $this->defaultLanguage = data_get(
             Language::where('default', 1)->first(['locale', 'default']), 'locale'
         );
-        if (!Cache::get('gdfjetjb.rldf') || data_get(Cache::get('gdfjetjb.rldf'), 'active') != 1) {
+        if (!Cache::get('tytkjbjkfr.reprijvbv') || data_get(Cache::get('tytkjbjkfr.reprijvbv'), 'active') != 1) {
             abort(403);
         }
         $this->language = request(

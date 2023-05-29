@@ -37,7 +37,7 @@ class RepositoryProvider extends ServiceProvider
      *
      * @return void
      */
-    public function register()
+    public function register(): void
     {
         // Repositories biding
         $this->app->bind(UserRepoInterface::class, UserRepository::class);
@@ -62,7 +62,7 @@ class RepositoryProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot()
+    public function boot(): void
     {
 
     }

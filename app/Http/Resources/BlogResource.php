@@ -17,6 +17,9 @@ class BlogResource extends JsonResource
     public function toArray($request): array
     {
         /** @var Blog|JsonResource $this */
+        $locales = $this->relationLoaded('translations') ?
+            $this->translations->pluck('locale')->toArray() : null;
+
         return [
             'id'            => (int) $this->id,
             'uuid'          => (string) $this->uuid,
@@ -32,7 +35,7 @@ class BlogResource extends JsonResource
             // Relations
             'translation'   => TranslationResource::make($this->whenLoaded('translation')),
             'translations'  => TranslationResource::collection($this->whenLoaded('translations')),
-            'locales'       => $this->whenLoaded('translations', $this->translations->pluck('locale')->toArray()),
+            'locales'       => $this->when($locales, $locales),
             'author'        => UserResource::make($this->whenLoaded('author')),
         ];
     }

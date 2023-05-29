@@ -3,10 +3,14 @@
 namespace Database\Seeders;
 
 use App\Models\Payment;
+use App\Traits\Loggable;
 use Illuminate\Database\Seeder;
+use Throwable;
 
 class PaymentSeeder extends Seeder
 {
+    use Loggable;
+
     /**
      * Run the database seeds.
      *
@@ -21,12 +25,18 @@ class PaymentSeeder extends Seeder
             ['tag' => 'paystack'],
             ['tag' => 'flutterWave'],
             ['tag' => 'paytabs'],
+            ['tag' => 'cash'],
+            ['tag' => 'wallet'],
         ];
 
         foreach ($payments as $payment) {
-            Payment::updateOrCreate([
-                'tag' => data_get($payment, 'tag')
-            ], $payment);
+            try {
+                Payment::updateOrCreate([
+                    'tag' => data_get($payment, 'tag')
+                ], $payment);
+            } catch (Throwable $e) {
+                $this->error($e);
+            }
         }
 
     }

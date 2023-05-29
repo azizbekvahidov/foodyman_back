@@ -28,8 +28,6 @@ class ExtraValueService extends CoreService
     {
         try {
 
-            /** @var ExtraGroup $group */
-
             $group = (new ExtraGroupRepository)->extraGroupDetails(data_get($data, 'extra_group_id'));
 
             if (empty($group)) {
@@ -40,12 +38,14 @@ class ExtraValueService extends CoreService
                 ];
             }
 
-            /** @var ExtraValue $extraValue */
+            /** @var ExtraGroup $group */
+
             $extraValue = $group->extraValues()->create($data);
 
             $images = data_get($data, 'images', []);
 
             if (is_array($images)) {
+                /** @var ExtraValue $extraValue */
                 $extraValue->galleries()->delete();
                 $extraValue->uploads($images ?: []);
             }
@@ -70,7 +70,6 @@ class ExtraValueService extends CoreService
     public function update(int $id, array $data): array
     {
         try {
-            /** @var ExtraValue $extraValue */
             $extraValue = $this->model()->find($id);
 
             if (empty($extraValue)) {
@@ -81,6 +80,7 @@ class ExtraValueService extends CoreService
                 ];
             }
 
+            /** @var ExtraValue $extraValue */
             $extraValue->update($data);
 
             $images = data_get($data, 'images');
@@ -123,7 +123,6 @@ class ExtraValueService extends CoreService
 
     public function setActive(int $id): array
     {
-        /** @var ExtraValue $extraValue */
         $extraValue = ExtraValue::find($id);
 
         if (empty($extraValue)) {
@@ -134,6 +133,7 @@ class ExtraValueService extends CoreService
             ];
         }
 
+        /** @var ExtraValue $extraValue */
         $extraValue->update(['active' => !$extraValue->active]);
 
         return [

@@ -16,7 +16,7 @@ class UserActivityService extends CoreService
      */
     protected function getModelClass(): string
     {
-        return User::class;
+        return UserActivity::class;
     }
 
     /**

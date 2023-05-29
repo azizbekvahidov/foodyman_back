@@ -16,7 +16,17 @@ class StoreRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'user_id'               => 'integer|exists:users,id',
+            'user_id'               => [
+                'integer',
+                Rule::exists('users', 'id')->whereNull('deleted_at')
+            ],
+            'waiter_id'             => [
+                'integer',
+                Rule::exists('users', 'id')->whereNull('deleted_at')
+            ],
+            'table_id'              => 'integer',
+            'booking_id'            => 'integer',
+            'user_booking_id'       => 'integer',
             'currency_id'           => 'required|integer|exists:currencies,id',
             'rate'                  => 'required|numeric',
             'shop_id'               => [
@@ -25,15 +35,17 @@ class StoreRequest extends BaseRequest
                 Rule::exists('shops', 'id')->whereNull('deleted_at')
             ],
             'delivery_fee'          => 'nullable|numeric',
+            'waiter_fee'            => 'nullable|numeric',
             'delivery_type'         => ['required', Rule::in(Order::DELIVERY_TYPES)],
             'coupon'                => 'nullable|string',
             'location'              => 'array',
             'location.latitude'     => 'required|numeric',
             'location.longitude'    => 'required|numeric',
             'address'               => 'array',
+            'address_id'            => ['integer', Rule::exists('user_addresses', 'id')],
             'phone'                 => 'string',
             'username'              => 'string',
-            'delivery_date'         => 'required|date|date_format:Y-m-d',
+            'delivery_date'         => 'date|date_format:Y-m-d',
             'delivery_time'         => 'nullable|string',
             'note'                  => 'nullable|string|max:191',
             'cart_id'               => 'integer|exists:carts,id',

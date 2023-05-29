@@ -26,7 +26,7 @@ class ChangeFirebaseTokenFromUsersTable extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            //
+            $table->text('firebase_token')->nullable();
         });
     }
 }

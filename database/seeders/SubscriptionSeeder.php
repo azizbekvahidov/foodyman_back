@@ -3,10 +3,14 @@
 namespace Database\Seeders;
 
 use App\Models\Subscription;
+use App\Traits\Loggable;
 use Illuminate\Database\Seeder;
+use Throwable;
 
 class SubscriptionSeeder extends Seeder
 {
+    use Loggable;
+
     /**
      * Run the database seeds.
      *
@@ -69,8 +73,15 @@ class SubscriptionSeeder extends Seeder
             ],
         ];
 
-        foreach ($data as $item){
-            Subscription::updateOrInsert(['id' => $item['id']], $item);
+        foreach ($data as $item) {
+
+            try {
+                Subscription::updateOrInsert(['id' => $item['id']], $item);
+            } catch (Throwable $e) {
+                $this->error($e);
+            }
+
         }
+
     }
 }

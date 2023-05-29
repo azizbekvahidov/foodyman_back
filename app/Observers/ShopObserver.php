@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\Shop;
 use App\Services\DeletingService\DeletingService;
+use App\Services\ModelLogService\ModelLogService;
 use App\Traits\Loggable;
 use Cache;
 use Exception;
@@ -29,11 +30,14 @@ class ShopObserver
     /**
      * Handle the Shop "created" event.
      *
+     * @param Shop $shop
      * @return void
      */
-    public function created(): void
+    public function created(Shop $shop): void
     {
         Cache::flush();
+
+        (new ModelLogService)->logging($shop, $shop->getAttributes(), 'created');
     }
 
     /**
@@ -55,6 +59,8 @@ class ShopObserver
         }
 
         Cache::flush();
+
+        (new ModelLogService)->logging($shop, $shop->getAttributes(), 'updated');
     }
 
     /**
@@ -68,6 +74,8 @@ class ShopObserver
         (new DeletingService)->shop($shop);
 
         Cache::flush();
+
+        (new ModelLogService)->logging($shop, $shop->getAttributes(), 'deleted');
     }
 
     /**
@@ -78,7 +86,7 @@ class ShopObserver
      */
     public function restored(Shop $shop): void
     {
-        //
+        (new ModelLogService)->logging($shop, $shop->getAttributes(), 'restored');
     }
 
 }

@@ -68,7 +68,21 @@ class Handler extends ExceptionHandler
 
     public function handleException($request, Throwable $exception): JsonResponse
     {
-        if ($exception instanceof RouteNotFoundException || $exception instanceof NotFoundHttpException) {
+        if ($exception instanceof RouteNotFoundException) {
+            return $this->onErrorResponse([
+                'code'      => ResponseError::ERROR_404,
+                'message'   => __('errors.' . ResponseError::ERROR_404, locale: request('language', 'en'))
+            ]);
+        }
+
+        $page    = data_get(optional($request)->all(), 'page');
+        $perPage = data_get(optional($request)->all(), 'perPage');
+
+        if ($exception instanceof NotFoundHttpException && $page && $perPage) {
+            return $this->successResponse(__('errors.' . ResponseError::SUCCESS, locale: request('language', 'en')));
+        }
+
+        if ($exception instanceof NotFoundHttpException && !$page && !$perPage) {
             return $this->onErrorResponse([
                 'code'      => ResponseError::ERROR_404,
                 'message'   => __('errors.' . ResponseError::ERROR_404, locale: request('language', 'en'))

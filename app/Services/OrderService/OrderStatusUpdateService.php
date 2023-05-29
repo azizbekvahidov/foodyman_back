@@ -63,6 +63,12 @@ class OrderStatusUpdateService extends CoreService
                     PayReferral::dispatchAfterResponse($order->user, 'increment');
                 }
 
+//                $cookingExist = Settings::adminSettings()->where('key', 'cooking_exist')->first()?->value;
+//
+//                if (!$cookingExist && $status == Order::STATUS_ACCEPTED) {
+//
+//                }
+
                 if ($status == Order::STATUS_CANCELED && $order->orderRefunds?->count() === 0) {
 
                     $user  = $order->user;
@@ -139,10 +145,18 @@ class OrderStatusUpdateService extends CoreService
             !empty($sellerToken) && is_array($sellerToken) ? $sellerToken : [],
         );
 
-        $default = data_get(Language::where('default', 1)->first(['locale', 'default']), 'locale');
+        $userIds = array_merge(
+            !empty($userToken) && $order->user?->id   ? [$order->user?->id]          : [],
+            !empty($userToken) && $order->deliveryMan?->id   ? [$order->deliveryMan?->id]   : [],
+            !empty($userToken) && $order->shop?->seller?->id ? [$order->shop?->seller?->id] : []
+        );
 
-        $tStatus = Translation::where('locale', $this->language)
-            ->orWhere('locale', $default)
+        $default = data_get(Language::languagesList()->where('default', 1)->first(), 'locale');
+
+        $tStatus = Translation::where(function ($q) use ($default) {
+            $q->where('locale', $this->language)->orWhere('locale', $default);
+        })
+            ->where('key', $status)
             ->first()?->value;
 
         $this->sendNotification(
@@ -153,7 +167,8 @@ class OrderStatusUpdateService extends CoreService
                 'id'     => $order->id,
                 'status' => $order->status,
                 'type'   => 'status_changed'
-            ]
+            ],
+            $userIds
 //            $order->load([
 //                'user:id,uuid,firstname,lastname,email,phone,img,created_at',
 //                'shop:tax,user_id,id,logo_img,location,created_at,type,uuid',

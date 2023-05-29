@@ -29,6 +29,7 @@ use Illuminate\Support\Carbon;
  * @method static Builder|Invitation newModelQuery()
  * @method static Builder|Invitation newQuery()
  * @method static Builder|Invitation query()
+ * @method static Builder|Invitation withTrashed()
  * @method static Builder|Invitation whereCreatedAt($value)
  * @method static Builder|Invitation whereId($value)
  * @method static Builder|Invitation whereRole($value)

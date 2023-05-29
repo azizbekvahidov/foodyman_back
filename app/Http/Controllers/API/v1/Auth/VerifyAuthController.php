@@ -64,7 +64,7 @@ class VerifyAuthController extends Controller
                 'deleted_at'        => null,
             ]);
 
-            return $this->successResponse(__('errors.' . ResponseError::SUCCESS), [
+            return $this->successResponse(__('errors.' . ResponseError::SUCCESS, locale: $this->language), [
                 'email' => $user->email
             ]);
         } catch (Throwable $e) {
@@ -105,6 +105,7 @@ class VerifyAuthController extends Controller
                 [
                     'type' => 'new_user_by_referral'
                 ],
+                [$referral->id]
             );
         }
 

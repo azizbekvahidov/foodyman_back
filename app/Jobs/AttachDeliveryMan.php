@@ -13,7 +13,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Queue\{InteractsWithQueue, SerializesModels};
 
 class AttachDeliveryMan implements ShouldQueue
@@ -42,8 +41,6 @@ class AttachDeliveryMan implements ShouldQueue
      */
     public function handle(): void
     {
-        $result = [];
-
         try {
             $order = $this->order;
 
@@ -99,16 +96,13 @@ class AttachDeliveryMan implements ShouldQueue
                     'data'              => (new NotificationHelper)->deliveryManOrder($order, $this->language)
                 ];
 
-                $result[] = Http::withHeaders($headers)->post('https://fcm.googleapis.com/fcm/send', $data)->json();
+                Http::withHeaders($headers)->post('https://fcm.googleapis.com/fcm/send', $data)->json();
 
                 sleep(data_get($second, 'value', 30));
             }
 
         } catch (Exception $e) {
-            Log::error($e->getMessage(), [$e->getCode(), $e->getLine()]);
-//            $this->error($e);
+            $this->error($e);
         }
-
-        Log::error('$result', [$result]);
     }
 }

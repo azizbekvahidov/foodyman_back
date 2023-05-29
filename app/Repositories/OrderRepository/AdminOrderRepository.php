@@ -38,13 +38,14 @@ class AdminOrderRepository extends CoreRepository
         return $order
             ->withCount('orderDetails')
             ->with([
-                'user:id,lastname,firstname,img',
+                'user:id,lastname,firstname,img,email,phone',
                 'shop:id,logo_img',
                 'shop.translation' => fn($q) => $q->select('id', 'shop_id', 'locale', 'title')
                     ->where('locale', $this->language)->orWhere('locale', $locale),
                 'deliveryMan:id,lastname,firstname',
                 'transaction:id,payable_type,payable_id,payment_sys_id',
                 'transaction.paymentSystem:id,tag',
+                'currency',
             ])
             ->updatedDate($this->updatedDate)
             ->filter($filter)

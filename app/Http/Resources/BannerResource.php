@@ -17,6 +17,8 @@ class BannerResource extends JsonResource
     public function toArray($request): array
     {
         /** @var Banner|JsonResource $this */
+        $locales = $this->relationLoaded('translations') ?
+            $this->translations->pluck('locale')->toArray() : null;
 
         return [
             'id'            => (int) $this->id,
@@ -34,7 +36,7 @@ class BannerResource extends JsonResource
             // Relations
             'translation'   => TranslationResource::make($this->whenLoaded('translation')),
             'translations'  => TranslationResource::collection($this->whenLoaded('translations')),
-            'locales'       => $this->whenLoaded('translations', $this->translations->pluck('locale')->toArray()),
+            'locales'       => $this->when($locales, $locales),
             'galleries'     => GalleryResource::collection($this->whenLoaded('galleries')),
             'shops'         => ShopResource::collection($this->whenLoaded('shops')),
         ];

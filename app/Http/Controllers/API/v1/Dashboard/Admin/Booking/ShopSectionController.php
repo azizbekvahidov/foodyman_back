@@ -15,10 +15,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ShopSectionController extends AdminBaseController
 {
-    /**
-     * @param ShopSectionService $service
-     * @param ShopSectionRepository $repository
-     */
+
     public function __construct(private ShopSectionService $service, private ShopSectionRepository $repository)
     {
         parent::__construct();

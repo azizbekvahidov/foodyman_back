@@ -18,7 +18,7 @@ class UserResource extends JsonResource
      */
     public function toArray($request): array
     {
-        /** @var User|JsonResource $this */
+        /** @var User|UserResource $this */
 
         $reviewsGroup = null;
 
@@ -72,19 +72,23 @@ class UserResource extends JsonResource
             'referral_from_withdraw_count'  => $this->when(request('referral'), $this->referral_from_withdraw_count),
             'referral_to_withdraw_count'    => $this->when(request('referral'), $this->referral_to_withdraw_count),
             'referral_to_topup_count'       => $this->when(request('referral'), $this->referral_to_topup_count),
-            'orders'                => OrderResource::collection($this->whenLoaded('orders')),
-            'orders_count'          => $this->when($this->orders_count, $this->orders_count),
-            'orders_sum_total_price'=> $this->whenLoaded($this->orders_sum_total_price, $this->orders_sum_total_price),
-            'deliveryman_orders'    => OrderResource::collection($this->whenLoaded('deliveryManOrders')),
-            'email_subscribe'       => $this->whenLoaded('emailSubscription'),
-            'notifications'         => $this->whenLoaded('notifications'),
-            'shop'                  => ShopResource::make($this->whenLoaded('shop')),
-            'wallet'                => WalletResource::make($this->whenLoaded('wallet')),
-            'point'                 => UserPointResource::make($this->whenLoaded('point')),
-            'reviews'               => ReviewResource::collection($this->whenLoaded('reviews')),
-            'assign_reviews'        => ReviewResource::collection($this->whenLoaded('assignReviews')),
-            'invitations'           => InviteResource::collection($this->whenLoaded('invitations')),
-            'delivery_man_setting'  => DeliveryManSettingResource::make($this->whenLoaded('deliveryManSetting')),
+            'orders'                        => OrderResource::collection($this->whenLoaded('orders')),
+            'orders_count'                  => $this->when($this->orders_count, $this->orders_count),
+            'orders_sum_total_price'        => $this->whenLoaded($this->orders_sum_total_price, $this->orders_sum_total_price),
+
+            'deliveryman_orders'            => OrderResource::collection($this->whenLoaded('deliveryManOrders')),
+            'email_subscribe'               => $this->whenLoaded('emailSubscription'),
+            'notifications'                 => $this->whenLoaded('notifications'),
+            'shop'                          => ShopResource::make($this->whenLoaded('shop')),
+            'shops'                         => ShopResource::collection($this->whenLoaded('shops')),
+            'wallet'                        => WalletResource::make($this->whenLoaded('wallet')),
+            'point'                         => UserPointResource::make($this->whenLoaded('point')),
+            'reviews'                       => ReviewResource::collection($this->whenLoaded('reviews')),
+            'assign_reviews'                => ReviewResource::collection($this->whenLoaded('assignReviews')),
+            'invitations'                   => InviteResource::collection($this->whenLoaded('invitations')),
+            'delivery_man_setting'          => DeliveryManSettingResource::make($this->whenLoaded('deliveryManSetting')),
+            'logs'                          => ModelLogResource::collection($this->whenLoaded('logs')),
+            'addresses'                     => UserAddressResource::collection($this->whenLoaded('addresses')),
         ];
     }
 

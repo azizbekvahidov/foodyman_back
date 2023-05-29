@@ -17,10 +17,16 @@ class BookingService extends CoreService
     public function create(array $data): array
     {
         try {
+            $data['deleted_at'] = null;
+
+            $shop = $this->model()->withTrashed()->updateOrCreate([
+                'shop_id' => data_get($data, 'shop_id'),
+            ], $data);
+
             return [
                 'status'    => true,
                 'code'      => ResponseError::NO_ERROR,
-                'data'      => $this->model()->create($data),
+                'data'      => $shop,
             ];
         } catch (Throwable $e) {
             $this->error($e);

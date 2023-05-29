@@ -6,17 +6,21 @@ use App\Helpers\ResponseError;
 use App\Http\Controllers\API\v1\Dashboard\Seller\SellerBaseController;
 use App\Http\Requests\Booking\Table\StoreRequest;
 use App\Http\Requests\FilterParamsRequest;
-use App\Http\Resources\Booking\ShopSectionResource;
+use App\Http\Resources\Booking\TableResource;
 use App\Models\Booking\ShopSection;
 use App\Models\Booking\Table;
+use App\Repositories\Booking\TableRepository\TableReportRepository;
 use App\Repositories\Booking\TableRepository\TableRepository;
 use App\Services\Booking\TableService\TableService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class TableController extends SellerBaseController
 {
-    public function __construct(private TableService $service, private TableRepository $repository)
+    public function __construct(
+        private TableService $service,
+        private TableRepository $repository,
+        private TableReportRepository $reportRepository,
+    )
     {
         parent::__construct();
     }
@@ -25,13 +29,27 @@ class TableController extends SellerBaseController
      * Display a listing of the resource.
      *
      * @param FilterParamsRequest $request
-     * @return AnonymousResourceCollection
+     * @return JsonResponse
      */
-    public function index(FilterParamsRequest $request): AnonymousResourceCollection
+    public function index(FilterParamsRequest $request): JsonResponse
     {
-        $model = $this->repository->paginate($request->merge(['shop_id' => $this->shop->id])->all());
+        $model = $this->repository->paginate($request->all());
 
-        return ShopSectionResource::collection($model);
+        $statistic  = $this->reportRepository->bookings();
+
+        return $this->successResponse(__('errors.' . ResponseError::SUCCESS, locale: $this->language), [
+            'statistic' => $statistic,
+            'tables'    => TableResource::collection($model),
+            'meta'      => [
+                'current_page'  => $model->currentPage(),
+                'per_page'      => $model->perPage(),
+                'last_page'     => $model->lastPage(),
+                'total'         => $model->total(),
+                'from'          => $model->currentPage(),
+                'to'            => $model->lastPage(),
+            ],
+            'links'             => $model->links(),
+        ]);
     }
 
     /**
@@ -67,7 +85,7 @@ class TableController extends SellerBaseController
 
         return $this->successResponse(
             __('errors.' . ResponseError::RECORD_WAS_SUCCESSFULLY_CREATED, locale: $this->language),
-            ShopSectionResource::make(data_get($result, 'data'))
+            TableResource::make(data_get($result, 'data'))
         );
     }
 
@@ -88,7 +106,7 @@ class TableController extends SellerBaseController
 
         return $this->successResponse(
             __('errors.' . ResponseError::SUCCESS, locale: $this->language),
-            ShopSectionResource::make($result)
+            TableResource::make($result)
         );
     }
 
@@ -119,8 +137,22 @@ class TableController extends SellerBaseController
 
         return $this->successResponse(
             __('errors.' . ResponseError::RECORD_WAS_SUCCESSFULLY_UPDATED, locale: $this->language),
-            ShopSectionResource::make(data_get($result, 'data'))
+            TableResource::make(data_get($result, 'data'))
         );
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param int $id
+     * @param FilterParamsRequest $request
+     * @return array
+     */
+    public function disableDates(int $id, FilterParamsRequest $request): array
+    {
+        $filter = $request->merge(['id' => $id, 'shop_id' => $this->shop->id])->all();
+
+        return $this->repository->disableDates($filter);
     }
 
     /**

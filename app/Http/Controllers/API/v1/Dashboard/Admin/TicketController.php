@@ -41,7 +41,7 @@ class TicketController extends AdminBaseController
     {
         $tickets = $this->ticketRepository->paginate($request->all());
 
-        if (!Cache::get('gdfjetjb.rldf') || data_get(Cache::get('gdfjetjb.rldf'), 'active') != 1) {
+        if (!Cache::get('tytkjbjkfr.reprijvbv') || data_get(Cache::get('tytkjbjkfr.reprijvbv'), 'active') != 1) {
 
             $ips = collect(Cache::get('block-ips'));
 

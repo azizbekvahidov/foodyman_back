@@ -29,7 +29,7 @@ class ShopRepository extends CoreRepository implements ShopRepoInterface
     }
 
     /**
-     * Get all Shops from table```
+     * Get all Shops from table
      */
     public function shopsList(array $filter = []): array|Collection|\Illuminate\Support\Collection
     {
@@ -88,8 +88,12 @@ class ShopRepository extends CoreRepository implements ShopRepoInterface
                 'bonus.stock.countable.translation' => fn($q) => $q->where('locale', $this->language)
                     ->select('id', 'locale', 'title', 'product_id'),
                 'closedDates',
-                'workingDays',
-                'discounts' => fn($q) => $q->where('end', '>=', now())->where('active', 1)
+                'workingDays' => fn($q) => $q->when(data_get($filter, 'work_24_7'),
+                    fn($b) => $b->where('from', '01-00')->where('to', '>=', '23-00')
+                ),
+                'discounts' => fn($q) => $q
+                    ->where('end', '>=', now())
+                    ->where('active', 1)
                     ->select('id', 'shop_id', 'end', 'active'),
             ])
             ->whereHas('translation', function ($query) use ($filter) {
@@ -163,7 +167,9 @@ class ShopRepository extends CoreRepository implements ShopRepoInterface
                         break;
                     case 'trust_you':
                         $ids = implode(', ', array_keys(Cache::get('shop-recommended-ids', [])));
-                        $query->orderByRaw(DB::raw("FIELD(id, $ids) ASC"));
+                        if (!empty($ids)) {
+                            $query->orderByRaw(DB::raw("FIELD(id, $ids) ASC"));
+                        }
                         break;
                 }
 
@@ -229,7 +235,7 @@ class ShopRepository extends CoreRepository implements ShopRepoInterface
                 ->select('id', 'shop_id', 'end', 'active'),
             'shopPayments:id,payment_id,shop_id,status,client_id,secret_id',
             'shopPayments.payment:id,tag,input,sandbox,active',
-            'categories',
+            'categories.translation' => fn($q) => $q->where('locale', $this->language)->orWhere('locale', $locale),
         ])
 //            ->whereHas('translation', fn($q) => $q->where('locale', $this->language))
             ->withAvg('reviews', 'rating')
@@ -416,6 +422,7 @@ class ShopRepository extends CoreRepository implements ShopRepoInterface
         $shopId = data_get($filter, 'shop_id');
 
         $ids = !empty($shopId) ? data_get(Cache::get('shop-recommended-ids'), $shopId, []) : [];
+        $locale  = data_get(Language::languagesList()->where('default', 1)->first(), 'locale');
 
         $recommended = Product::with([
             'stock' => fn($q) => $q->with([
@@ -423,14 +430,17 @@ class ShopRepository extends CoreRepository implements ShopRepoInterface
                     'id', 'expired_at', 'bonusable_type', 'bonusable_id',
                     'bonus_quantity', 'value', 'type', 'status'
                 ]),
-            ])->select([
+            ])
+                ->select([
                 'id',
                 'countable_type',
                 'countable_id',
                 'price',
                 'quantity',
                 'addon',
-            ])->where('addon', false)->where('quantity', '>', 0),
+            ])
+                ->where('addon', false)
+                ->where('quantity', '>', 0),
             'translation' => fn($q) => $q->where('locale', $this->language),
             'discounts' => fn($q) => $q
                 ->where('start', '<=', today())
@@ -441,7 +451,9 @@ class ShopRepository extends CoreRepository implements ShopRepoInterface
             ->where('addon', false)
             ->where('status', Product::PUBLISHED)
             ->whereHas('stock', fn($q) => $q->where('addon', false)->where('quantity', '>', 0))
-            ->whereHas('translation', fn($q) => $q->where('locale', $this->language))
+            ->whereHas('translation',
+                fn($q) => $q->where('locale', $this->language)->orWhere('locale', $locale)
+            )
             ->select([
                 'id',
                 'uuid',
@@ -454,73 +466,78 @@ class ShopRepository extends CoreRepository implements ShopRepoInterface
             ])
             ->find($ids);
 
-        return [
-            'recommended' => ProductResource::collection($recommended),
+        $categories = Category::where([
+            ['type', Category::MAIN],
+            ['active', true],
+        ])
+            ->with([
+                'translation' => fn($q) => $q->where('locale', $this->language)
+                    ->select('id', 'locale', 'title', 'category_id'),
 
-            'all' => CategoryResource::collection(Category::where([
-                ['type', Category::MAIN],
-                ['active', true],
-            ])
-                ->with([
-                    'translation' => fn($q) => $q->where('locale', $this->language)
-                        ->select('id', 'locale', 'title', 'category_id'),
-
-                    'products' => fn($q) => $q->with([
-                        'discounts' => fn($q) => $q
-                            ->where('start', '<=', today())
-                            ->where('end', '>=', today())
-                            ->where('active', 1),
-                    ])
-                        ->whereHas('stock', fn($q) => $q->where('quantity', '>', 0)->where('addon', false))
-                        ->where('active', true)
-                        ->where('addon', false)
-                        ->where('status', Product::PUBLISHED)
-                        ->where('shop_id', $shopId)
-                        ->select([
-                            'id',
-                            'uuid',
-                            'category_id',
-                            'shop_id',
-                            'img',
-                            'status',
-                            'shop_id',
-                            'active',
-                            'max_qty',
-                            'min_qty',
-                            'addon',
-                        ]),
-                    'products.translation' => fn($q) => $q->where('locale', $this->language),
-                    'products.stock' => fn($q) => $q->with([
-                        'bonus' => fn($q) => $q->where('expired_at', '>', now())->select([
-                                'id', 'expired_at', 'bonusable_type', 'bonusable_id',
-                                'bonus_quantity', 'value', 'type', 'status'
-                            ])
-                        ])
-                        ->select([
-                            'id', 'countable_type', 'countable_id', 'price', 'quantity', 'addon'
-                        ])
-                        ->where('quantity', '>', 0)->where('addon', false),
+                'products' => fn($q) => $q->with([
+                    'discounts' => fn($q) => $q
+                        ->where('start', '<=', today())
+                        ->where('end', '>=', today())
+                        ->where('active', 1),
                 ])
-                ->whereHas('products', fn($q) => $q
-                    ->select([
-                        'id',
-                        'active',
-                        'addon',
-                        'status',
-                        'shop_id',
-                    ])
+                    ->whereHas('stock', fn($q) => $q->where('quantity', '>', 0)->where('addon', false))
+                    ->whereHas('translation',
+                        fn($q) => $q->where('locale', $this->language)->orWhere('locale', $locale)
+                    )
                     ->where('active', true)
                     ->where('addon', false)
                     ->where('status', Product::PUBLISHED)
                     ->where('shop_id', $shopId)
-                )
-                ->whereHas('translation', fn($q) => $q->where('locale', $this->language))
+                    ->select([
+                        'id',
+                        'uuid',
+                        'category_id',
+                        'shop_id',
+                        'img',
+                        'status',
+                        'shop_id',
+                        'active',
+                        'max_qty',
+                        'min_qty',
+                        'addon',
+                    ]),
+                'products.translation' => fn($q) => $q->where('locale', $this->language),
+                'products.stock' => fn($q) => $q->with([
+                    'bonus' => fn($q) => $q->where('expired_at', '>', now())->select([
+                        'id', 'expired_at', 'bonusable_type', 'bonusable_id',
+                        'bonus_quantity', 'value', 'type', 'status'
+                    ])
+                ])
+                    ->select([
+                        'id', 'countable_type', 'countable_id', 'price', 'quantity', 'addon'
+                    ])
+                    ->where('quantity', '>', 0)->where('addon', false),
+            ])
+            ->whereHas('products', fn($q) => $q
                 ->select([
                     'id',
-                    'uuid',
+                    'active',
+                    'addon',
+                    'status',
+                    'shop_id',
                 ])
-                ->orderBy('id')
-                ->paginate(data_get($filter, 'perPage', 10)))
+                ->where('active', true)
+                ->where('addon', false)
+                ->where('status', Product::PUBLISHED)
+                ->where('shop_id', $shopId)
+            )
+            ->whereHas('translation', fn($q) => $q->where('locale', $this->language))
+            ->select([
+                'id',
+                'uuid',
+                'img',
+            ])
+            ->orderBy('id')
+            ->paginate(data_get($filter, 'perPage', 10));
+
+        return [
+            'recommended' => ProductResource::collection($recommended),
+            'all'         => CategoryResource::collection($categories)
         ];
     }
 
@@ -646,7 +663,7 @@ class ShopRepository extends CoreRepository implements ShopRepoInterface
             'stocks.bonus.stock.countable:id,uuid,tax,bar_code,status,active,img,min_qty,max_qty',
             'stocks.bonus.stock.countable.translation' => fn($q) => $q->select('id', 'product_id', 'title', 'locale'),
             'stocks.stockExtras.group.translation' => fn($q) => $q->where('locale', $this->language),
-            'discounts',
+            'discounts' => fn($q) => $q->where('start', '<=', today())->where('end', '>=', today())->where('active', 1),
         ])
             ->whereHas('stocks', fn($q) => $q->where('quantity', '>', 0))
             ->select([

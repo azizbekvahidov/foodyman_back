@@ -24,6 +24,7 @@ class EmailTemplateResource extends JsonResource
             'body'              => $this->body,
             'alt_body'          => $this->alt_body,
             'status'            => $this->status,
+            'type'              => $this->type,
             'send_to'           => $this->when($this->send_to, date('Y-m-d H:00:00', strtotime($this->send_to))),
             'created_at'        => $this->when($this->created_at, $this->created_at?->format('Y-m-d H:i:s')),
             'updated_at'        => $this->when($this->updated_at, $this->updated_at?->format('Y-m-d H:i:s')),

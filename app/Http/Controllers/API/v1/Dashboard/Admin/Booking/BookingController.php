@@ -60,14 +60,14 @@ class BookingController extends AdminBaseController
     }
 
     /**
-     * @param Booking $booking
+     * @param int $shopId
      * @return JsonResponse
      */
-    public function show(Booking $booking): JsonResponse
+    public function show(int $shopId): JsonResponse
     {
         return $this->successResponse(
             __('errors.' . ResponseError::SUCCESS, locale: $this->language),
-            BookingResource::make($booking)
+            BookingResource::make($this->repository->showByShopId($shopId))
         );
     }
 

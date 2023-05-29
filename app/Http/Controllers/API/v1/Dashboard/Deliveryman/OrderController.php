@@ -38,6 +38,7 @@ class OrderController extends DeliverymanBaseController
     public function paginate(Request $request): AnonymousResourceCollection
     {
         $filter = $request->all();
+
         $filter['deliveryman'] = auth('sanctum')->id();
 
         unset($filter['isset-deliveryman']);
@@ -48,6 +49,10 @@ class OrderController extends DeliverymanBaseController
         }
 
         $orders = $this->repository->paginate($filter);
+
+        if (empty(data_get($filter, 'shop_ids'))) {
+            $orders = [];
+        }
 
         return OrderResource::collection($orders);
     }
