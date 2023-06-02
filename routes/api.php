@@ -392,7 +392,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
         });
 
         // Cook BLOCK
-        Route::group(['prefix' => 'cook', 'middleware' => ['sanctum.check', 'role:waiter'], 'as' => 'waiter.'], function () {
+        Route::group(['prefix' => 'cook', 'middleware' => ['sanctum.check', 'role:waiter'], 'as' => 'cook.'], function () {
             Route::get('orders/paginate',            [Cook\OrderController::class, 'paginate']);
             Route::get('orders/{id}',                [Cook\OrderController::class, 'show']);
             Route::post('orders/{id}/status/update', [Cook\OrderController::class, 'orderStatusUpdate']);
