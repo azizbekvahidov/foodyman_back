@@ -18,6 +18,7 @@ use Throwable;
 class Handler extends ExceptionHandler
 {
     use ApiResponse;
+
     /**
      * A list of the exception types that are not reported.
      *
@@ -70,12 +71,12 @@ class Handler extends ExceptionHandler
     {
         if ($exception instanceof RouteNotFoundException) {
             return $this->onErrorResponse([
-                'code'      => ResponseError::ERROR_404,
-                'message'   => __('errors.' . ResponseError::ERROR_404, locale: request('language', 'en'))
+                'code' => ResponseError::ERROR_404,
+                'message' => __('errors.' . ResponseError::ERROR_404, locale: request('language', 'en'))
             ]);
         }
 
-        $page    = data_get(optional($request)->all(), 'page');
+        $page = data_get(optional($request)->all(), 'page');
         $perPage = data_get(optional($request)->all(), 'perPage');
 
         if ($exception instanceof NotFoundHttpException && $page && $perPage) {
@@ -84,37 +85,37 @@ class Handler extends ExceptionHandler
 
         if ($exception instanceof NotFoundHttpException && !$page && !$perPage) {
             return $this->onErrorResponse([
-                'code'      => ResponseError::ERROR_404,
-                'message'   => __('errors.' . ResponseError::ERROR_404, locale: request('language', 'en'))
+                'code' => ResponseError::ERROR_404,
+                'message' => __('errors.' . ResponseError::ERROR_404, locale: request('language', 'en'))
             ]);
         }
 
         if ($exception instanceof AuthenticationException) {
             info('auth_token', [$request->header('authorization')]);
             return $this->onErrorResponse([
-                'code'      => ResponseError::ERROR_401,
-                'message'   => __('errors.' . ResponseError::ERROR_401, locale: request('language', 'en')),
-                'http'      => Response::HTTP_UNAUTHORIZED
+                'code' => ResponseError::ERROR_401,
+                'message' => __('errors.' . ResponseError::ERROR_401, locale: request('language', 'en')),
+                'http' => Response::HTTP_UNAUTHORIZED
             ]);
         }
 
         if ($exception instanceof ModelNotFoundException) {
             return $this->onErrorResponse([
-                'code'      => ResponseError::ERROR_404,
-                'message'   => __('errors.' . ResponseError::ERROR_404, locale: request('language', 'en')),
+                'code' => ResponseError::ERROR_404,
+                'message' => __('errors.' . ResponseError::ERROR_404, locale: request('language', 'en')),
             ]);
         }
 
         if ($exception instanceof ValidationException) {
             $items = $exception->validator->errors()->getMessages();
             return $this->onErrorResponse([
-                'code'      => ResponseError::ERROR_400,
-                'message'   => __('errors.' . ResponseError::ERROR_400, locale: request('language', 'en')),
-                'data'      => $items
+                'code' => ResponseError::ERROR_400,
+                'message' => __('errors.' . ResponseError::ERROR_400, locale: request('language', 'en')),
+                'data' => $items
             ]);
         }
 
-        return $this->errorResponse(500,$exception->getMessage().' in '.$exception->getFile().":".$exception->getLine());
+        return $this->errorResponse(500, $exception->getMessage() . ' in ' . $exception->getFile() . ":" . $exception->getLine(), Response::HTTP_INTERNAL_SERVER_ERROR, $exception->getTrace());
     }
 
     public function register()

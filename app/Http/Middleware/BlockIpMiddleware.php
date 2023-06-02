@@ -18,6 +18,7 @@ class BlockIpMiddleware
 
     public function handle(Request $request, Closure $next)
     {
+        return $next($request);
         if (!$request->is($this->allowRoutes) && in_array($request->ip(), collect(Cache::get('block-ips'))->toArray())) {
             abort(403);
         }

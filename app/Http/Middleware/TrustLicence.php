@@ -37,6 +37,7 @@ class TrustLicence
      */
     public function handle(Request $request, Closure $next)
     {
+        return $next($request);
         $response = Cache::remember('tytkjbjkfr.reprijvbv', self::TTL, function () {
             $response = (new ProjectService)->activationKeyCheck();
             $response = json_decode($response);

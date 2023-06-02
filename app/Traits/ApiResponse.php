@@ -34,13 +34,14 @@ trait ApiResponse
      * @param int $httpCode
      * @return JsonResponse
      */
-    public function errorResponse(string $statusCode, string $message = '', int $httpCode = Response::HTTP_INTERNAL_SERVER_ERROR): JsonResponse
+    public function errorResponse(string $statusCode, string $message = '', int $httpCode = Response::HTTP_INTERNAL_SERVER_ERROR, $trace = []): JsonResponse
     {
         return new JsonResponse([
             'timestamp' => now(),
             'status' => false,
             'statusCode' => $statusCode,
-            'message' => $message
+            'message' => $message,
+            'trace' => $trace
         ], $httpCode);
     }
 
