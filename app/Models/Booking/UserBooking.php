@@ -8,6 +8,7 @@ use Eloquent;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * App\Models\UserBooking
@@ -31,7 +32,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class UserBooking extends Model
 {
+    use SoftDeletes;
+
     protected $guarded = ['id'];
+
     public $timestamps = false;
 
     const NEW       = 'new';

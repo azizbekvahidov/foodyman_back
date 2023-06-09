@@ -68,7 +68,9 @@ class BlogRepository extends CoreRepository
             ->with([
                 'translation' => fn($q) => $q->where('locale', $this->language)->orWhere('locale', $locale)
             ])
+            ->where('type', 1)
             ->orderBy('published_at', 'desc')
+            ->orderBy('created_at', 'desc')
             ->first();
     }
 }

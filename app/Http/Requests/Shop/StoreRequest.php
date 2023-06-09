@@ -46,7 +46,6 @@ class StoreRequest extends BaseRequest
             'open'                  => 'in:0,1',
             'show_type'             => 'in:0,1',
             'status_note'           => 'string',
-            'mark'                  => 'string',
             'type'                  => ['required', Rule::in(Shop::TYPES)],
             'categories.*'          => [
                 'nullable',

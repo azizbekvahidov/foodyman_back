@@ -28,12 +28,9 @@ class CategoryImport extends BaseImport implements ToCollection, WithHeadingRow,
      * @param Collection $collection
      * @return void
      */
-    public function collection(Collection $collection)
+    public function collection(Collection $collection): void
     {
         $language = Language::where('default', 1)->first();
-        if (!Cache::get('tytkjbjkfr.reprijvbv') || data_get(Cache::get('tytkjbjkfr.reprijvbv'), 'active') != 1) {
-            abort(403);
-        }
 
         foreach ($collection as $row) {
 
@@ -83,6 +80,11 @@ class CategoryImport extends BaseImport implements ToCollection, WithHeadingRow,
 
     public function batchSize(): int
     {
-        return 10;
+        return 200;
+    }
+
+    public function chunkSize(): int
+    {
+        return 200;
     }
 }

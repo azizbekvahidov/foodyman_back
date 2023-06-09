@@ -3,6 +3,9 @@
 namespace App\Http\Resources;
 
 use App\Helpers\Utility;
+use App\Http\Resources\Booking\BookingResource;
+use App\Http\Resources\Booking\TableResource;
+use App\Http\Resources\Booking\UserBookingResource;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -75,13 +78,14 @@ class OrderResource extends JsonResource
             'current'                       => (bool)$this->current,
             'img'                           => $this->when($this->img, $this->img),
             'total_discount'                => $this->when($this->rate_total_discount, $this->rate_total_discount),
-            'created_at'                    => $this->created_at?->format('Y-m-d H:i:s'),
-            'updated_at'                    => $this->when($this->updated_at, $this->updated_at?->format('Y-m-d H:i:s')),
-            'deleted_at'                    => $this->when($this->deleted_at, $this->deleted_at?->format('Y-m-d H:i:s')),
+            'created_at'                    => $this->created_at?->format('Y-m-d H:i:s') . 'Z',
+            'updated_at'                    => $this->when($this->updated_at, $this->updated_at?->format('Y-m-d H:i:s') . 'Z'),
+            'deleted_at'                    => $this->when($this->deleted_at, $this->deleted_at?->format('Y-m-d H:i:s') . 'Z'),
             'km'                            => $this->whenLoaded('shop', $location),
 
             'deliveryman'                   => UserResource::make($this->whenLoaded('deliveryMan')),
             'waiter'                        => UserResource::make($this->whenLoaded('waiter')),
+            'cook'                          => UserResource::make($this->whenLoaded('cook')),
             'shop'                          => ShopResource::make($this->whenLoaded('shop')),
             'currency'                      => CurrencyResource::make($this->whenLoaded('currency')),
             'user'                          => UserResource::make($this->whenLoaded('user')),
@@ -96,6 +100,7 @@ class OrderResource extends JsonResource
             'galleries'                     => GalleryResource::collection($this->whenLoaded('galleries')),
             'logs'                          => ModelLogResource::collection($this->whenLoaded('logs')),
             'my_address'                    => UserAddressResource::make($this->whenLoaded('myAddress')),
+            'table'                         => TableResource::make($this->whenLoaded('table')),
         ];
     }
 }

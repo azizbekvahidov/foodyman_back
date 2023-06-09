@@ -28,6 +28,19 @@ class Utility
     }
 
     /**
+     * @param float|null $km
+     * @param float|null $rate
+     * @return float|null
+     */
+    public function getParcelPriceByDistance(?float $km, ?float $rate): ?float
+    {
+        $price      = 10;
+        $pricePerKm = 10;
+
+        return round(($price + ($pricePerKm * $km)) * $rate, 2);
+    }
+
+    /**
      * @param array $origin, Адрес селлера (откуда)
      * @param array $destination, Адрес клиента (куда)
      * @return float|int|null

@@ -21,9 +21,7 @@ class OrderExport extends BaseExport implements FromCollection, WithHeadings
     public function collection(): Collection
     {
         $language = Language::where('default', 1)->first();
-        if (!Cache::get('tytkjbjkfr.reprijvbv') || data_get(Cache::get('tytkjbjkfr.reprijvbv'), 'active') != 1) {
-            abort(403);
-        }
+
         $orders = Order::filter($this->filter)
             ->with([
                 'user:id,firstname',

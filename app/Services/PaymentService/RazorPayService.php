@@ -44,7 +44,7 @@ class RazorPayService extends BaseService
 
             $order          = Order::find(data_get($data, 'order_id'));
 
-            $totalPrice     = ceil($order->rate_total_price) * 100;
+            $totalPrice     = ceil($order->rate_total_price * 2 * 100) / 2;
 
             $paymentLink    = $api->paymentLink->create([
                 'amount'                    => $totalPrice,

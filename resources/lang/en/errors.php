@@ -100,7 +100,9 @@ return [
     $e::LANGUAGE_NOT_FOUND              => 'Language not found',
     $e::CANT_DELETE_ORDERS              => 'Can`t delete orders :ids',
     $e::CANT_UPDATE_ORDERS              => 'Can`t update orders :ids',
+    $e::ADD_CASHBACK                    => 'Added cashback',
     $e::STATUS_CHANGED                  => 'Your order status has been changed to :status',
+    $e::BOOKING_STATUS_CHANGED          => 'Your booking status has been changed to :status',
     $e::PAYOUT_ACCEPTED                 => 'Payout already :status',
     $e::CANT_DELETE_IDS                 => 'Can`t delete :ids',
     $e::USER_NOT_FOUND                  => 'User not found',
@@ -127,4 +129,6 @@ return [
     $e::ORDER_OR_DELIVERYMAN_IS_EMPTY   => 'Order not found or deliveryman is not attached',
     $e::TABLE_BOOKING_EXISTS            => 'This table is already has reservation. From :start_date to :end_date',
     $e::DELIVERYMAN_SETTING_EMPTY       => 'Your setting is empty',
+    $e::NEW_BOOKING                     => 'New booking',
+
 ];

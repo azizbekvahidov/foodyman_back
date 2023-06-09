@@ -19,14 +19,14 @@ class PaymentSeeder extends Seeder
     public function run(): void
     {
         $payments = [
-            ['tag' => 'stripe', 'input' => 1],
-            ['tag' => 'razorpay'],
-            ['tag' => 'mercado-pago'],
-            ['tag' => 'paystack'],
-            ['tag' => 'flutterWave'],
-            ['tag' => 'paytabs'],
-            ['tag' => 'cash'],
-            ['tag' => 'wallet'],
+            ['tag' => 'stripe',         'input' => 8],
+            ['tag' => 'razorpay',       'input' => 7],
+            ['tag' => 'mercado-pago',   'input' => 6],
+            ['tag' => 'paystack',       'input' => 5],
+            ['tag' => 'flutterWave',    'input' => 4],
+            ['tag' => 'paytabs',        'input' => 3],
+            ['tag' => 'cash',           'input' => 1],
+            ['tag' => 'wallet',         'input' => 2],
         ];
 
         foreach ($payments as $payment) {

@@ -7,6 +7,9 @@ use App\Jobs\PayReferral;
 use App\Models\Language;
 use App\Models\Order;
 use App\Models\OrderDetail;
+use App\Models\Point;
+use App\Models\PointHistory;
+use App\Models\PushNotification;
 use App\Models\Transaction;
 use App\Models\Translation;
 use App\Models\User;
@@ -58,7 +61,42 @@ class OrderStatusUpdateService extends CoreService
 //                        $this->deliverymanWalletTopUp($order);
 //                    }
 
+                    $default = data_get(Language::languagesList()->where('default', 1)->first(), 'locale');
+
+                    $tStatus = Translation::where(function ($q) use ($default) {
+                        $q->where('locale', $this->language)->orWhere('locale', $default);
+                    })
+                        ->where('key', $status)
+                        ->first()?->value;
+
                     $this->adminWalletTopUp($order);
+
+                    $point = Point::getActualPoint($order->total_price);
+
+                    if (!empty($point)) {
+                        $token  = $order->user?->firebase_token;
+                        $token = is_array($token) ? $token : [$token];
+
+                        $this->sendNotification(
+                            $token,
+                            __('errors.' . ResponseError::ADD_CASHBACK, ['status' => !empty($tStatus) ? $tStatus : $status], $this->language),
+                            $order->id,
+                            [
+                                'id'     => $order->id,
+                                'status' => $order->status,
+                                'type'   => PushNotification::ADD_CASHBACK
+                            ],
+                            [$order->user_id]
+                        );
+
+                        $order->pointHistories()->create([
+                            'user_id'   => $order->user_id,
+                            'price'     => $point,
+                            'note'      => 'cashback',
+                        ]);
+
+                        $order->user?->wallet?->increment($point);
+                    }
 
                     PayReferral::dispatchAfterResponse($order->user, 'increment');
                 }
@@ -88,6 +126,14 @@ class OrderStatusUpdateService extends CoreService
                             'user'   => $user
                         ]);
 
+                    }
+
+                    if ($order->pointHistories?->count() > 0) {
+                        foreach ($order->pointHistories as $pointHistory) {
+                            /** @var PointHistory $pointHistory */
+                            $order->user?->wallet?->decrement($pointHistory->price);
+                            $pointHistory->delete();
+                        }
                     }
 
                     if ($order->status === Order::STATUS_DELIVERED) {
@@ -140,15 +186,15 @@ class OrderStatusUpdateService extends CoreService
         }
 
         $firebaseTokens = array_merge(
-            !empty($userToken) && is_array($userToken) ? $userToken : [],
+            !empty($userToken) && is_array($userToken)        ? $userToken        : [],
             !empty($deliveryManToken) && is_array($deliveryManToken) ? $deliveryManToken : [],
-            !empty($sellerToken) && is_array($sellerToken) ? $sellerToken : [],
+            !empty($sellerToken) && is_array($sellerToken)           ? $sellerToken      : [],
         );
 
         $userIds = array_merge(
-            !empty($userToken) && $order->user?->id   ? [$order->user?->id]          : [],
-            !empty($userToken) && $order->deliveryMan?->id   ? [$order->deliveryMan?->id]   : [],
-            !empty($userToken) && $order->shop?->seller?->id ? [$order->shop?->seller?->id] : []
+            !empty($userToken) && $order->user?->id         ? [$order->user?->id]          : [],
+            !empty($deliveryManToken) && $order->deliveryMan?->id  ? [$order->deliveryMan?->id]   : [],
+            !empty($sellerToken) && $order->shop?->seller?->id     ? [$order->shop?->seller?->id] : []
         );
 
         $default = data_get(Language::languagesList()->where('default', 1)->first(), 'locale');
@@ -166,16 +212,9 @@ class OrderStatusUpdateService extends CoreService
             [
                 'id'     => $order->id,
                 'status' => $order->status,
-                'type'   => 'status_changed'
+                'type'   => PushNotification::STATUS_CHANGED
             ],
             $userIds
-//            $order->load([
-//                'user:id,uuid,firstname,lastname,email,phone,img,created_at',
-//                'shop:tax,user_id,id,logo_img,location,created_at,type,uuid',
-//                'shop.translation' => fn($q) => $q->select('id', 'shop_id', 'locale', 'title')->where('locale', $this->language),
-//                'transaction:id,user_id,payable_type,price,payable_id,note,perform_time,refund_time',
-//                'transaction.paymentSystem' => fn($q) => $q->select('id', 'tag', 'active'),
-//            ])->setAttribute('type', 'status_changed'),
         );
 
         return ['status' => true, 'code' => ResponseError::NO_ERROR, 'data' => $order];
@@ -205,49 +244,49 @@ class OrderStatusUpdateService extends CoreService
 
         (new WalletHistoryService)->create($request);
     }
-
-    /**
-     * @param Order $order
-     * @return void
-     */
-    private function sellerWalletTopUp(Order $order): void
-    {
-        $seller = $order->shop->seller;
-
-        if ($seller->wallet) {
-
-            $request = request()->merge([
-                'type'      => 'topup',
-                'price'     => $order->total_price - $order->delivery_fee - $order->commission_fee,
-                'note'      => "For Seller Order #$order->id",
-                'status'    => WalletHistory::PAID,
-                'user'      => $seller,
-            ])->all();
-
-            (new WalletHistoryService)->create($request);
-        }
-    }
-
-    /**
-     * @param Order $order
-     * @return void
-     */
-    private function deliverymanWalletTopUp(Order $order): void
-    {
-        $deliveryman = $order->deliveryMan;
-
-        if ($deliveryman->wallet) {
-
-            $request = request()->merge([
-                'type'      => 'topup',
-                'price'     => $order->delivery_fee,
-                'note'      => "For Deliveryman Order fee #$order->id",
-                'status'    => WalletHistory::PAID,
-                'user'      => $deliveryman,
-            ])->all();
-
-            (new WalletHistoryService)->create($request);
-        }
-
-    }
+//
+//    /**
+//     * @param Order $order
+//     * @return void
+//     */
+//    private function sellerWalletTopUp(Order $order): void
+//    {
+//        $seller = $order->shop->seller;
+//
+//        if ($seller->wallet) {
+//
+//            $request = request()->merge([
+//                'type'      => 'topup',
+//                'price'     => $order->total_price - $order->delivery_fee - $order->commission_fee,
+//                'note'      => "For Seller Order #$order->id",
+//                'status'    => WalletHistory::PAID,
+//                'user'      => $seller,
+//            ])->all();
+//
+//            (new WalletHistoryService)->create($request);
+//        }
+//    }
+//
+//    /**
+//     * @param Order $order
+//     * @return void
+//     */
+//    private function deliverymanWalletTopUp(Order $order): void
+//    {
+//        $deliveryman = $order->deliveryMan;
+//
+//        if ($deliveryman->wallet) {
+//
+//            $request = request()->merge([
+//                'type'      => 'topup',
+//                'price'     => $order->delivery_fee,
+//                'note'      => "For Deliveryman Order fee #$order->id",
+//                'status'    => WalletHistory::PAID,
+//                'user'      => $deliveryman,
+//            ])->all();
+//
+//            (new WalletHistoryService)->create($request);
+//        }
+//
+//    }
 }

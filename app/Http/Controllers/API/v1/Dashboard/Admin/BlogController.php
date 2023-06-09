@@ -7,14 +7,18 @@ use App\Http\Requests\Blog\AdminRequest;
 use App\Http\Requests\FilterParamsRequest;
 use App\Http\Resources\BlogResource;
 use App\Models\Blog;
+use App\Models\PushNotification;
 use App\Repositories\BlogRepository\BlogRepository;
 use App\Services\BlogService\BlogService;
+use App\Traits\Notification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class BlogController extends AdminBaseController
 {
+    use Notification;
+
     private BlogRepository $repository;
     private BlogService $service;
 
@@ -154,7 +158,11 @@ class BlogController extends AdminBaseController
      */
     public function blogPublish(string $uuid): JsonResponse
     {
-        $blog = Blog::firstWhere('uuid', $uuid);
+        /** @var Blog $blog */
+        $blog = Blog::with([
+            'translation' => fn($q) => $q->where('locale', $this->language)->orWhereNotNull('title')
+        ])
+            ->firstWhere('uuid', $uuid);
 
         if (empty($blog)) {
             return $this->onErrorResponse([
@@ -167,6 +175,19 @@ class BlogController extends AdminBaseController
 
         if (!data_get($result, 'status')) {
             return $this->onErrorResponse($result);
+        }
+
+        if ($blog->type === 'blog') {
+            dispatch(function () use ($blog) {
+                $this->sendAllNotification(
+                    $blog->translation?->title,
+                    [
+                        'id'            => $blog->id,
+                        'published_at'  => optional($blog->published_at)->format('Y-m-d H:i:s'),
+                        'type'          => PushNotification::NEWS_PUBLISH
+                    ],
+                );
+            })->afterResponse();
         }
 
         return $this->successResponse(

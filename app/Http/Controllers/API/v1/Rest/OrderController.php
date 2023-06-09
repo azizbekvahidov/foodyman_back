@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\API\v1\Rest;
 
 use App\Helpers\ResponseError;
+use App\Http\Requests\Order\AddReviewRequest;
 use App\Http\Requests\Order\StoreRequest;
+use App\Models\Order;
 use App\Repositories\OrderRepository\OrderRepository;
+use App\Services\OrderService\OrderReviewService;
 use App\Services\OrderService\OrderService;
 use Illuminate\Http\JsonResponse;
 
@@ -51,6 +54,31 @@ class OrderController extends RestBaseController
         $order = $this->orderRepository->orderById($id);
 
         return $this->successResponse(ResponseError::NO_ERROR, $this->orderRepository->reDataOrder($order));
+    }
+
+    /**
+     * Add Review to Order.
+     *
+     * @param int $id
+     * @param AddReviewRequest $request
+     * @return JsonResponse
+     */
+    public function addOrderReview(int $id, AddReviewRequest $request): JsonResponse
+    {
+        /** @var Order $order */
+        $order = Order::with(['review', 'reviews'])->find($id);
+
+        $result = (new OrderReviewService)->addReview($order, $request->validated());
+
+        if (!data_get($result, 'status')) {
+            return $this->onErrorResponse($result);
+        }
+
+        return $this->successResponse(
+            ResponseError::NO_ERROR,
+            $this->orderRepository->reDataOrder(data_get($result, 'data'))
+        );
+
     }
 
 }

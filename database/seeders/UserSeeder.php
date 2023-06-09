@@ -141,7 +141,7 @@ class UserSeeder extends Seeder
 
         foreach ($users as $user) {
             try {
-                User::updateOrInsert(['id' => data_get($user, 'id')], $user);
+                User::updateOrInsert(['email' => data_get($user, 'email')], $user);
             } catch (Throwable $e) {
                 $this->error($e);
             }
@@ -175,10 +175,7 @@ class UserSeeder extends Seeder
         ]);
 
         $deliveryman->syncRoles('deliveryman');
-
-        User::find(107)->syncRoles('waiter');
-
-        User::find(108)->syncRoles('cook');
+        User::where('email', 'cook@githubit.com')->first()->syncRoles('cook');
 
         $shop = Shop::updateOrCreate([
             'user_id'           => 103,
@@ -195,7 +192,6 @@ class UserSeeder extends Seeder
             'logo_img'          => 'url.webp',
             'status'            => 'approved',
             'status_note'       => 'approved',
-            'mark'              => 'mark',
             'delivery_time'     => [
                 'from'              => '10',
                 'to'                => '90',
@@ -210,6 +206,21 @@ class UserSeeder extends Seeder
             ], [
                 'deleted_at' => null
             ]);
+        } catch (Throwable $e) {
+            $this->error($e);
+        }
+
+        try {
+            $waiter = User::where('email', 'waiter@githubit.com')->first();
+            $waiter->syncRoles('waiter');
+            $waiter->invitations()->withTrashed()->updateOrCreate([
+                'shop_id' => $shop->id,
+                'role'    => 'waiter',
+                'status'  => 1,
+            ], [
+                'deleted_at' => null
+            ]);
+
         } catch (Throwable $e) {
             $this->error($e);
         }

@@ -60,22 +60,28 @@ class OrderRepository extends CoreRepository implements OrderRepoInterface
      * This is only for users route
      * @param array $filter
      * @param string $paginate
+     * @param array $with
      * @return Paginator
      */
-    public function ordersPaginate(array $filter = [], string $paginate = 'simplePaginate'): Paginator
+    public function ordersPaginate(array $filter = [], string $paginate = 'simplePaginate', array $with = []): Paginator
     {
         /** @var Order $order */
         $order = $this->model();
 
-        return $order
-            ->withCount('orderDetails')
-            ->with([
+        if (empty($with)) {
+            $with = [
                 'shop:id,location,tax,price,price_per_km,background_img,logo_img',
                 'shop.translation'      => fn($q) => $q->where('locale', $this->language),
                 'currency'              => fn($q) => $q->select('id', 'title', 'symbol'),
-            ])
-            ->updatedDate($this->updatedDate)
+                'user:id,firstname,lastname,uuid,img,phone',
+            ];
+        }
+
+        return $order
+            ->withCount('orderDetails')
+            ->with($with)
             ->filter($filter)
+            ->updatedDate($this->updatedDate)
             ->orderBy(data_get($filter, 'column', 'id'), data_get($filter, 'sort', 'desc'))
             ->$paginate(data_get($filter, 'perPage', 10));
     }
@@ -323,24 +329,28 @@ class OrderRepository extends CoreRepository implements OrderRepoInterface
      */
     public function orderById(int $id, int $shopId = null): ?Order
     {
+        $locale     = data_get(Language::languagesList()->where('default', 1)->first(), 'locale');
+
         return $this->model()
             ->withTrashed()
             ->with([
-                'user' => fn($q) => $q->withCount(['orders' => fn($q) => $q->where('status', Order::STATUS_DELIVERED)])
-                    ->withSum(['orders' => fn($q) => $q->where('status', Order::STATUS_DELIVERED)], 'total_price'),
+                'user' => fn($u) => $u->withCount(['orders' => fn($u) => $u->where('status', Order::STATUS_DELIVERED)])
+                    ->withSum(['orders' => fn($u) => $u->where('status', Order::STATUS_DELIVERED)], 'total_price'),
                 'review',
                 'pointHistories',
-                'currency' => fn($q) => $q->select('id', 'title', 'symbol'),
-                'deliveryMan' => fn($q) => $q->withAvg('assignReviews', 'rating'),
+                'currency' => fn($c) => $c->select('id', 'title', 'symbol'),
+                'deliveryMan' => fn($d) => $d->withAvg('assignReviews', 'rating'),
                 'deliveryMan.deliveryManSetting',
                 'coupon',
                 'shop:id,location,tax,price,price_per_km,background_img,logo_img,uuid,phone',
-                'shop.translation' => fn($q) => $q->where('locale', $this->language),
-                'orderDetails' => fn($q) => $q->whereNull('parent_id'),
-                'orderDetails.stock.countable.translation' => fn($q) => $q->where('locale', $this->language),
-                'orderDetails.children.stock.countable.translation' => fn($q) => $q->where('locale', $this->language),
-                'orderDetails.stock.stockExtras.group.translation' => function ($q) {
-                    $q->select('id', 'extra_group_id', 'locale', 'title')->where('locale', $this->language);
+                'shop.translation' => fn($st) => $st->where('locale', $this->language)->orWhere('locale', $locale),
+                'orderDetails' => fn($od) => $od->whereNull('parent_id'),
+                'orderDetails.stock.countable.translation' => fn($ct) => $ct->where('locale', $this->language)->orWhere('locale', $locale),
+                'orderDetails.children.stock.countable.translation' => fn($ct) => $ct->where('locale', $this->language)->orWhere('locale', $locale),
+                'orderDetails.stock.stockExtras.group.translation' => function ($cgt) use($locale) {
+                    $cgt->select('id', 'extra_group_id', 'locale', 'title')
+                        ->where('locale', $this->language)
+                        ->orWhere('locale', $locale);
                 },
                 'orderRefunds',
                 'transaction.paymentSystem',

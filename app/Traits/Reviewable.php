@@ -38,7 +38,7 @@ trait Reviewable
             'reviewable_id'     => $this->id,
             'reviewable_type'   => self::class,
             'assignable_id'     => $assignable->id,
-            'assignable_type'   => get_class($assignable),
+            'assignable_type'   => $assignable,
         ], [
             'rating'            => data_get($collection, 'rating'),
             'comment'           => data_get($collection, 'comment'),
@@ -49,6 +49,7 @@ trait Reviewable
             $review->update(['img' => data_get($collection, 'images.0')]);
             $review->uploads(data_get($collection, 'images', []));
         }
+
     }
 
     public function reviews(): MorphMany

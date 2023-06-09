@@ -65,7 +65,7 @@ class BookingController extends SellerBaseController
 
         $model = $this->repository->showByShopId($shopId);
 
-        return !empty($model) ? BookingResource::make($model) : ['data' => []];
+        return !empty($model) ? BookingResource::make($model) : ['data' => null];
     }
 
     /**

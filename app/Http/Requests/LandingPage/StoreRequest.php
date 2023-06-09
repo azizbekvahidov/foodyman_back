@@ -18,7 +18,7 @@ class StoreRequest extends BaseRequest
         return [
             'type'      => [
                 'required',
-                Rule::in(LandingPage::TYPES), Rule::unique('landing_pages', 'type')
+                Rule::in(LandingPage::TYPES), Rule::unique('landing_pages', 'type')->whereNull('deleted_at')
             ],
             'data'      => ['required', 'array'],
             'images'    => ['array'],

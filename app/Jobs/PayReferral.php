@@ -2,7 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Models\Currency;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Referral;
@@ -48,22 +47,36 @@ class PayReferral implements ShouldQueue
         }
 
         $referral = Referral::where('expired_at', '>=', now())->first();
-        $priceFrom = $referral?->price_from;
-        $priceTo   = $referral?->price_to;
 
-        if (!empty($this->user?->referral) &&
-            $this->user->orders?->where('status', Order::STATUS_DELIVERED)?->count() === 1
-        ) {
-            $owner = User::where('my_referral', $this->user->referral)->first();
+        if (empty($referral)) {
+            return;
+        }
 
-            if ($owner->my_referral !== $owner->referral || $this->user->my_referral !== $this->user->referral) {
+        if (empty($this->user?->referral)) {
+            return;
+        }
 
-                if ($this->type === 'increment') {
-                    $this->increment($owner, $priceFrom, $priceTo);
-                } else if ($this->type === 'decrement') {
-                    $this->decrement($owner, $priceFrom, $priceTo);
-                }
+        $count = $this->user->orders()->where('status', Order::STATUS_DELIVERED)?->count() === 1;
 
+        if (!$count) {
+            return;
+        }
+
+        $owner = User::where('my_referral', $this->user->referral)->first();
+
+        if (!$owner) {
+            return;
+        }
+
+        $priceFrom = $referral->price_from;
+        $priceTo   = $referral->price_to;
+
+        if ($owner->my_referral !== $owner->referral || $this->user->my_referral !== $this->user->referral) {
+
+            if ($this->type === 'increment') {
+                $this->increment($owner, $priceFrom, $priceTo);
+            } else if ($this->type === 'decrement') {
+                $this->decrement($owner, $priceFrom, $priceTo);
             }
 
         }
@@ -84,7 +97,7 @@ class PayReferral implements ShouldQueue
             $currency  = $owner->wallet->currency;
             $priceFrom = $priceFrom * data_get($currency, 'rate');
 
-            $owner->wallet->increment('price', (double)$priceFrom);
+            $owner->wallet()->increment('price', (double)$priceFrom);
 
             $this->transaction($owner, $priceFrom, 'referral_from_topup');
         }
@@ -94,7 +107,7 @@ class PayReferral implements ShouldQueue
             $currency  = $owner->wallet->currency;
             $priceTo   = $priceTo * data_get($currency, 'rate');
 
-            $this->user->wallet->increment('price', (double)$priceTo);
+            $this->user->wallet()->increment('price', (double)$priceTo);
 
             $this->transaction($this->user, $priceTo, 'referral_to_topup');
         }
@@ -115,7 +128,7 @@ class PayReferral implements ShouldQueue
             $currency  = $owner->wallet->currency;
             $priceFrom = $priceFrom * data_get($currency, 'rate');
 
-            $owner->wallet->decrement('price', (double)$priceFrom);
+            $owner->wallet()->decrement('price', (double)$priceFrom);
 
             $this->transaction($owner, $priceFrom, 'referral_from_withdraw');
 
@@ -126,7 +139,7 @@ class PayReferral implements ShouldQueue
             $currency  = $this->user->wallet->currency;
             $priceTo   = $priceTo * data_get($currency, 'rate');
 
-            $this->user->wallet->decrement('price', (double)$priceTo);
+            $this->user->wallet()->decrement('price', (double)$priceTo);
 
             $this->transaction($this->user, $priceTo, 'referral_to_withdraw');
 

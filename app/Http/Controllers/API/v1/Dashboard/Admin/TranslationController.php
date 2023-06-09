@@ -50,6 +50,7 @@ class TranslationController extends AdminBaseController
         $translations = Translation::filter($request->all())
             ->when($request->input('search'), fn ($query, $search) => $query->where('key', 'LIKE', "%$search%"))
             ->orderBy($request->input('column', 'id'), $request->input('sort','desc'))
+            ->groupBy('key', 'id', 'group', 'locale', 'value')
             ->get();
 
         $values = $translations->mapToGroups(function (Translation $item) {

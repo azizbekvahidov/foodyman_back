@@ -31,22 +31,22 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $deleted_at
  * @property-read Collection|Gallery[] $galleries
  * @property-read int|null $galleries_count
- * @property-read Order|Product|Shop $reviewable
+ * @property-read Model|Eloquent $reviewable
  * @property-read Model|Eloquent $assignable
  * @property-read User $user
  * @method static ReviewFactory factory(...$parameters)
- * @method static Builder|Review newModelQuery()
- * @method static Builder|Review newQuery()
- * @method static Builder|Review query()
- * @method static Builder|Review whereComment($value)
- * @method static Builder|Review whereCreatedAt($value)
- * @method static Builder|Review whereId($value)
- * @method static Builder|Review whereImg($value)
- * @method static Builder|Review whereRating($value)
- * @method static Builder|Review whereReviewableId($value)
- * @method static Builder|Review whereReviewableType($value)
- * @method static Builder|Review whereUpdatedAt($value)
- * @method static Builder|Review whereUserId($value)
+ * @method static Builder|self newModelQuery()
+ * @method static Builder|self newQuery()
+ * @method static Builder|self query()
+ * @method static Builder|self whereComment($value)
+ * @method static Builder|self whereCreatedAt($value)
+ * @method static Builder|self whereId($value)
+ * @method static Builder|self whereImg($value)
+ * @method static Builder|self whereRating($value)
+ * @method static Builder|self whereReviewableId($value)
+ * @method static Builder|self whereReviewableType($value)
+ * @method static Builder|self whereUpdatedAt($value)
+ * @method static Builder|self whereUserId($value)
  * @mixin Eloquent
  */
 class Review extends Model
@@ -80,6 +80,5 @@ class Review extends Model
     {
         return $this->belongsTo(User::class);
     }
-
 
 }

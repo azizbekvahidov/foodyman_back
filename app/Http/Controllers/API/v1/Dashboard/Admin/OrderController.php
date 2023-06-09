@@ -10,6 +10,7 @@ use App\Http\Requests\Order\CookUpdateRequest;
 use App\Http\Requests\Order\DeliveryManUpdateRequest;
 use App\Http\Requests\Order\OrderChartPaginateRequest;
 use App\Http\Requests\Order\OrderChartRequest;
+use App\Http\Requests\Order\StatusUpdateRequest;
 use App\Http\Requests\Order\StocksCalculateRequest;
 use App\Http\Requests\Order\StoreRequest;
 use App\Http\Requests\Order\UpdateRequest;
@@ -17,6 +18,7 @@ use App\Http\Requests\Order\WaiterUpdateRequest;
 use App\Http\Resources\OrderResource;
 use App\Imports\OrderImport;
 use App\Models\Order;
+use App\Models\PushNotification;
 use App\Models\Settings;
 use App\Models\Shop;
 use App\Models\User;
@@ -166,9 +168,9 @@ class OrderController extends AdminBaseController
             $address = UserAddress::find($request->input('address_id'));
         }
 
-        $check   = Utility::pointInPolygon($address?->location ?? $request->input('location'), $shop->deliveryZone->address);
+        $check = Utility::pointInPolygon($address?->location ?? $request->input('location'), $shop->deliveryZone->address);
 
-        if ($check) {
+        if (!$check) {
             return $this->onErrorResponse([
                 'code'    => ResponseError::ERROR_433,
                 'message' => __('errors.' . ResponseError::NOT_IN_POLYGON, locale: $this->language)
@@ -188,7 +190,7 @@ class OrderController extends AdminBaseController
             is_array($firebaseToken) ? $firebaseToken : [],
             "New order was created",
             data_get($result, 'data.id'),
-            data_get($result, 'data')?->setAttribute('type', 'new_order')?->only(['id', 'status']),
+            data_get($result, 'data')?->setAttribute('type', PushNotification::NEW_ORDER)?->only(['id', 'status', 'type']),
             $seller?->id ? [$seller->id] : []
         );
 
@@ -322,10 +324,10 @@ class OrderController extends AdminBaseController
      * Update Order Status details by OrderDetail ID.
      *
      * @param int $id
-     * @param FilterParamsRequest $request
+     * @param StatusUpdateRequest $request
      * @return JsonResponse
      */
-    public function orderStatusUpdate(int $id, FilterParamsRequest $request): JsonResponse
+    public function orderStatusUpdate(int $id, StatusUpdateRequest $request): JsonResponse
     {
         /** @var Order $order */
         $order = Order::with([

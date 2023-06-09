@@ -2,13 +2,20 @@
 
 namespace App\Services\PushNotificationService;
 
+ini_set('memory_limit', '4G');
+set_time_limit(0);
+
+use App\Models\Booking\Table;
 use App\Models\PushNotification;
 use App\Repositories\CoreRepository;
+use App\Traits\Notification;
 use DB;
 use Throwable;
 
 class PushNotificationService extends CoreRepository
 {
+    use Notification;
+
     protected function getModelClass(): string
     {
         return PushNotification::class;
@@ -25,6 +32,41 @@ class PushNotificationService extends CoreRepository
 
     /**
      * @param array $data
+     * @return PushNotification|null
+     */
+    public function restStore(array $data): ?PushNotification
+    {
+        try {
+            $table = Table::with([
+                'shopSection:id,shop_id',
+                'shopSection.shop:id,user_id',
+                'shopSection.shop.seller:id,firebase_token'
+            ])
+                ->find($data['table_id']);
+
+            /** @var Table|null $table */
+            $this->sendNotification(
+                $table?->shopSection?->shop?->seller?->firebase_token ?? [],
+                "New client in table $table->name",
+                $table->id,
+                ['type' => PushNotification::NEW_IN_TABLE]
+            );
+
+            return PushNotification::create([
+                'type'      => PushNotification::NEW_IN_TABLE,
+                'title'     => $table->id,
+                'body'      => "New client in table $table->name",
+                'data'      => ['type' => PushNotification::NEW_IN_TABLE],
+                'user_id'   => $table?->shopSection?->shop?->seller?->id
+            ])->load(['user']);
+        } catch (Throwable $e) {
+            $this->error($e);
+            return null;
+        }
+    }
+
+    /**
+     * @param array $data
      * @param array $userIds
      * @return bool
      */
@@ -35,12 +77,16 @@ class PushNotificationService extends CoreRepository
         foreach ($chunks as $chunk) {
 
             foreach ($chunk as $userId) {
+
+                $newData = is_array(data_get($data, 'data')) ? $data['data'] : [data_get($data, 'data')];
+
                 $data['user_id'] = $userId;
-                $data['data']    = is_array(data_get($data, 'data')) ? $data['data'] : [data_get($data, 'data')];
+                $data['data']    = $newData;
+
                 try {
                     $this->model()->create($data);
                 } catch (Throwable $e) {
-//                    $this->error($e);
+                    $this->error($e);
                 }
             }
 

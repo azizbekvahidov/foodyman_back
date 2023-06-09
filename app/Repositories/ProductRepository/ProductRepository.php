@@ -10,7 +10,6 @@ use App\Http\Resources\ProductReportResource;
 use App\Jobs\ExportJob;
 use App\Models\Language;
 use App\Models\Order;
-use App\Models\OrderDetail;
 use App\Models\Product;
 use App\Models\Stock;
 use App\Models\UserActivity;
@@ -160,7 +159,12 @@ class ProductRepository extends CoreRepository implements ProductRepoInterface
             ->find(data_get($filter, 'products', []));
     }
 
-    public function productsSearch(array $filter = []) {
+    /**
+     * @param array $filter
+     * @return mixed
+     */
+    public function productsSearch(array $filter = []): mixed
+    {
 
         return $this->model()
             ->filter($filter)
@@ -193,6 +197,10 @@ class ProductRepository extends CoreRepository implements ProductRepoInterface
             ->paginate(data_get($filter, 'perPage', 10));
     }
 
+    /**
+     * @param array $data
+     * @return LengthAwarePaginator
+     */
     public function selectStockPaginate(array $data): LengthAwarePaginator
     {
         return Stock::with([
@@ -227,84 +235,10 @@ class ProductRepository extends CoreRepository implements ProductRepoInterface
             ->paginate(data_get($data, 'perPage', 10));
     }
 
-    public function reportPaginate($products, $dateFrom, $dateTo, $column, $sort): array
-    {
-        $default    = data_get(Language::where('default', 1)->first(['locale', 'default']), 'locale');
-        $paginate   = [];
-
-        foreach ($products as $product) {
-            $findProduct = Product::withTrashed()
-                ->with([
-                    'translation' => fn($q) => $q->select('id', 'product_id', 'locale', 'title')
-                        ->where('locale', $this->language)->orWhere('locale', $default),
-                    'stocks:id,quantity,countable_type,countable_id',
-                    'stocks.orderDetails:id,stock_id,total_price,quantity,order_id',
-                    'stocks.stockExtras.group.translation' => fn($q) => $q->where('locale', $this->language),
-                    'category' => fn($q) => $q->select('id', 'uuid'),
-                    'category.translation' => fn($q) => $q->where('locale', $this->language)
-                        ->select('id', 'category_id', 'locale', 'title'),
-                ])
-                ->find($product->id);
-
-            $stocks = $findProduct->stocks->transform(function (Stock $stock) use($dateFrom, $dateTo) {
-
-                $orderDetails = $stock->orderDetails->load([
-                    'order' => fn($q) => $q->select('id', 'status', 'created_at', 'deleted_at')
-                        ->where('created_at', '>=', $dateFrom)
-                        ->where('created_at', '<=', $dateTo)
-                        ->where('status', Order::STATUS_DELIVERED)
-                        ->whereNull('deleted_at'),
-                ])->reject(fn(OrderDetail $orderDetail) => empty($orderDetail->order));
-
-                return [
-                    'id'        => $stock->id,
-                    'extras'    => $stock->stockExtras,
-                    'price'     => $orderDetails->sum('total_price'),
-                    'quantity'  => $orderDetails->sum('quantity'),
-                    'count'     => $orderDetails->groupBy('order_id')->count(),
-                ];
-            })->reject(fn(array $item) => data_get($item, 'count') === 0 &&
-                data_get($item, 'quantity') === 0 && data_get($item, 'price') === 0
-            )
-                ->values()
-                ->toArray();
-
-            $paginate[$product->id] = [
-                'id'            => $product->id,
-                'uuid'          => $product->uuid,
-                'active'        => $product->active,
-                'category_id'   => $product->category_id,
-                'shop_id'       => $product->shop_id,
-                'keywords'      => $product->keywords,
-                'bar_code'      => $product->bar_code,
-                'count'         => $product->count,
-                'quantity'      => $product->quantity,
-                'price'         => $product->price,
-                'stocks'        => $stocks,
-                'translation'   => $findProduct->translation,
-                'category'      => $findProduct->category,
-            ];
-        }
-
-        $meta = [
-            'last_page'         => $products->lastPage(),
-            'page'              => $products->currentPage(),
-            'total'             => $products->total(),
-            'more_pages'        => $products->hasMorePages(),
-            'has_pages'         => $products->hasPages(),
-        ];
-
-        $isDesc = $sort === 'desc';
-
-        return [
-            'data' => collect(array_values($paginate))
-                ->sortBy($column, $isDesc ? SORT_DESC : SORT_ASC, $isDesc)
-                ->values()
-                ->toArray(),
-            'meta' => $meta
-        ];
-    }
-
+    /**
+     * @param array $filter
+     * @return array
+     */
     public function reportChart(array $filter): array
     {
         $dateFrom   = date('Y-m-d 00:00:01', strtotime(data_get($filter, 'date_from')));
@@ -357,6 +291,10 @@ class ProductRepository extends CoreRepository implements ProductRepoInterface
         ];
     }
 
+    /**
+     * @param array $filter
+     * @return array
+     */
     public function productReportPaginate(array $filter): array
     {
         try {
@@ -600,7 +538,6 @@ class ProductRepository extends CoreRepository implements ProductRepoInterface
      */
     public function mostPopulars(array $filter): LengthAwarePaginator
     {
-        $type       = data_get($filter, 'type');
         $locale     = data_get(Language::languagesList()->where('default', 1)->first(), 'locale');
 
         $filter['model_type'] = Product::class;

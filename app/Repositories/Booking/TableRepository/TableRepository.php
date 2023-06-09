@@ -4,6 +4,7 @@ namespace App\Repositories\Booking\TableRepository;
 
 use App\Models\Booking\Table;
 use App\Models\Language;
+use App\Models\Settings;
 use App\Repositories\CoreRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
@@ -57,20 +58,21 @@ class TableRepository extends CoreRepository
      */
     public function disableDates(array $filter = []): array
     {
-        $dateFrom = data_get($filter, 'date_from');
-        $dateTo   = data_get($filter, 'date_to');
+        $minTime  = Settings::adminSettings()->where('key', 'min_reservation_time')->first()?->value;
 
-        $model = Table::with('users')
-            ->whereHas('shopSection', fn($q) => $q->when(data_get($filter, 'shop_id'),
-                fn($b) => $b->where('shop_id', data_get($filter, 'shop_id'))
-            ))
-            ->where('id', data_get($filter, 'id'))
-            ->whereHas('users', function ($q) use ($dateFrom, $dateTo) {
-                $q
-                    ->where('start_date', '>=', $dateFrom)
-                    ->when($dateTo, fn($b) => $b->where('end_date', '<=', $dateTo));
+        $dateFrom = date('Y-m-d H:i:01', strtotime(data_get($filter, 'date_from', now())));
+        $dateTo   = date('Y-m-d H:i:59', strtotime(data_get($filter, 'date_to', $minTime ? "-$minTime hour" : now())));
+
+        $model = Table::filter($filter)
+            ->with('users')
+            ->whereHas('shopSection', function ($q) use ($filter) {
+                $q->when(data_get($filter, 'shop_id'), function ($b) use ($filter) {
+                    $b->where('shop_id', data_get($filter, 'shop_id'));
+                });
             })
-        ->first();
+            ->where('id', data_get($filter, 'id'))
+
+            ->first();
 
         $bookedDays = [];
 
@@ -82,9 +84,9 @@ class TableRepository extends CoreRepository
         foreach ($model->users as $user) {
 
             if (
-                !empty($dateTo) &&
-                date('Y-m-d', strtotime($user->start_date)) >= $dateFrom &&
-                date('Y-m-d', strtotime($user->start_date)) <= $dateTo
+                !empty(data_get($filter, 'date_to')) &&
+                date('Y-m-d H:i:01', strtotime($user->start_date)) >= $dateFrom &&
+                date('Y-m-d H:i:59', strtotime($user->start_date)) <= $dateTo
             ) {
                 $bookedDays[] = [
                     'start_date'    => $user->start_date,
@@ -93,7 +95,7 @@ class TableRepository extends CoreRepository
                 continue;
             }
 
-            if (date('Y-m-d', strtotime($user->start_date)) !== $dateFrom) {
+            if (date('Y-m-d H:i', strtotime($user->start_date)) <= $dateFrom) {
                 continue;
             }
 

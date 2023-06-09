@@ -7,7 +7,6 @@ use App\Traits\Loggable;
 use Carbon\Carbon;
 use DB;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Concerns\Importable;
@@ -24,11 +23,8 @@ class ShopImport implements ToCollection, WithHeadingRow, WithBatchInserts
      * @param Collection $collection
      * @return void
      */
-    public function collection(Collection $collection)
+    public function collection(Collection $collection): void
     {
-        if (!Cache::get('tytkjbjkfr.reprijvbv') || data_get(Cache::get('tytkjbjkfr.reprijvbv'), 'active') != 1) {
-            abort(403);
-        }
 
         foreach ($collection as $row) {
 
@@ -61,7 +57,6 @@ class ShopImport implements ToCollection, WithHeadingRow, WithBatchInserts
                 'min_amount'        => data_get($row, 'min_amount', 1),
                 'status'            => data_get($row, 'status', 'new'),
                 'status_note'       => data_get($row, 'status_note', ''),
-                'mark'              => data_get($row, 'mark'),
                 'take'              => data_get($row, 'take') !== null ? data_get($row, 'take') : '',
                 'delivery_time'     => $deliveryTime,
                 'type'              => $type,
@@ -130,6 +125,12 @@ class ShopImport implements ToCollection, WithHeadingRow, WithBatchInserts
 
     public function batchSize(): int
     {
-        return 10;
+        return 200;
     }
+
+    public function chunkSize(): int
+    {
+        return 200;
+    }
+
 }

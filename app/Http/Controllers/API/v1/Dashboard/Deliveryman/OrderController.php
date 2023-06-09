@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\v1\Dashboard\Deliveryman;
 use App\Helpers\ResponseError;
 use App\Http\Requests\FilterParamsRequest;
 use App\Http\Requests\Order\AddReviewRequest;
+use App\Http\Requests\Order\StatusUpdateRequest;
 use App\Http\Resources\OrderResource;
 use App\Models\Order;
 use App\Repositories\OrderRepository\DeliveryMan\OrderRepository;
@@ -13,7 +14,6 @@ use App\Services\OrderService\OrderService;
 use App\Services\OrderService\OrderStatusUpdateService;
 use App\Traits\Notification;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class OrderController extends DeliverymanBaseController
@@ -32,10 +32,10 @@ class OrderController extends DeliverymanBaseController
     }
 
     /**
-     * @param Request $request
+     * @param FilterParamsRequest $request
      * @return AnonymousResourceCollection
      */
-    public function paginate(Request $request): AnonymousResourceCollection
+    public function paginate(FilterParamsRequest $request): AnonymousResourceCollection
     {
         $filter = $request->all();
 
@@ -49,10 +49,6 @@ class OrderController extends DeliverymanBaseController
         }
 
         $orders = $this->repository->paginate($filter);
-
-        if (empty(data_get($filter, 'shop_ids'))) {
-            $orders = [];
-        }
 
         return OrderResource::collection($orders);
     }
@@ -83,10 +79,10 @@ class OrderController extends DeliverymanBaseController
      * Update Order Status details by OrderDetail ID.
      *
      * @param int $id
-     * @param FilterParamsRequest $request
+     * @param StatusUpdateRequest $request
      * @return JsonResponse
      */
-    public function orderStatusUpdate(int $id, FilterParamsRequest $request): JsonResponse
+    public function orderStatusUpdate(int $id, StatusUpdateRequest $request): JsonResponse
     {
         $statuses = [
             Order::STATUS_READY     => Order::STATUS_READY,

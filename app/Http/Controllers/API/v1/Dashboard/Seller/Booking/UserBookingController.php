@@ -30,7 +30,7 @@ class UserBookingController extends SellerBaseController
      */
     public function index(FilterParamsRequest $request): AnonymousResourceCollection
     {
-        $model = $this->repository->paginate($request->all());
+        $model = $this->repository->paginate($request->merge(['shop_id' => $this->shop->id])->all());
 
         return UserBookingResource::collection($model);
     }

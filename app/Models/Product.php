@@ -289,10 +289,12 @@ class Product extends Model
                 });
             })
             ->when(data_get($array, 'deals'), function (Builder $query) {
-                $query->whereHas('stocks.bonus', function ($q) {
-                    $q->where('expired_at', '>=', now());
-                })->orWhereHas('discounts', function ($q) {
-                    $q->where('end', '>=', now())->where('active', 1);
+                $query->where(function ($query) {
+                    $query->whereHas('stocks.bonus', function ($q) {
+                        $q->where('expired_at', '>=', now());
+                    })->orWhereHas('discounts', function ($q) {
+                        $q->where('end', '>=', now())->where('active', 1);
+                    });
                 });
             })
             ->when(isset($array['active']), fn($query, $active) => $query->active($active))

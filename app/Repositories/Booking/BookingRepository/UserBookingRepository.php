@@ -22,7 +22,7 @@ class UserBookingRepository extends CoreRepository
         return $models
             ->filter($filter)
             ->with([
-                'booking:id,max_time,start_time,end_time',
+                'booking:id,max_time,start_time,end_time,shop_id',
                 'user:id,uuid,firstname,lastname,img,active',
                 'table:id,name,shop_section_id,tax,chair_count',
             ])
@@ -39,7 +39,7 @@ class UserBookingRepository extends CoreRepository
         $locale = data_get(Language::languagesList()->where('default', 1)->first(), 'locale');
 
         return $model->loadMissing([
-            'booking:id,shop_id,max_time,start_time,end_time',
+            'booking:id,shop_id,max_time,start_time,end_time,shop_id',
             'booking.shop:id,uuid,logo_img,open,visibility',
             'booking.shop.translation' => fn($q) => $q->where('locale', $this->language)->orWhere('locale', $locale),
 

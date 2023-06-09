@@ -8,6 +8,7 @@ use App\Http\Requests\Payment\StripeRequest;
 use App\Http\Requests\Shop\SubscriptionRequest;
 use App\Models\Currency;
 use App\Models\Subscription;
+use App\Models\WalletHistory;
 use App\Services\PaymentService\MercadoPagoService;
 use App\Traits\ApiResponse;
 use App\Traits\OnResponse;
@@ -16,10 +17,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Log;
-use MercadoPago\Config;
-use MercadoPago\Item;
-use MercadoPago\Preference;
-use MercadoPago\SDK;
 use Redirect;
 use Throwable;
 
@@ -41,45 +38,17 @@ class MercadoPagoController extends Controller
      */
     public function orderProcessTransaction(Request $request): JsonResponse
     {
-        SDK::setAccessToken("TEST-6668869803819899-030119-21a35cc741cf11c0619a6eec892e3465-96344171");
-
-        $config = new Config();
-        $config->set('sandbox', true); // Устанавливаем режим песочницы (sandbox)
-        $config->set('access_token', 'TEST-6668869803819899-030119-21a35cc741cf11c0619a6eec892e3465-96344171'); // Устанавливаем токен доступа
-
-        $item = new Item();
-        $item->id = '001'; // Идентификатор товара
-        $item->title = 'Название товара'; // Название товара
-        $item->quantity = 1; // Количество товара
-        $item->unit_price = 10.0; // Цена за единицу товара
-
-        $preference = new Preference();
-        $preference->items = array($item); // Добавляем товар в список покупок
-        $preference->back_urls = array(
-            'success' => "https://foodyman.org/orders/3012",
-            'failure' => "https://foodyman.org/orders/3012",
-            'pending' => "https://foodyman.org/orders/3012"
-        );
-        $preference->auto_return = 'approved'; // Автоматический возврат на URL после успешной оплаты
-
-        $preference->save(); // Сохраняем настройки
-
-        $payment_link = $preference->init_point; // Получаем ссылку для оплаты
-
-        dd(
-            $preference->Error(),
-            $payment_link,
-        );
-
         try {
             $result = $this->service->orderProcessTransaction($request->all());
 
             return $this->successResponse('success', $result);
         } catch (Throwable $e) {
             $this->error($e);
-            return $this->onErrorResponse(['message' => __('errors.' . ResponseError::ERROR_501, locale: $this->language)]);
+            return $this->onErrorResponse([
+                'code'    => ResponseError::ERROR_501,
+                'message' => $e->getMessage(),
+            ]);
         }
-
     }
 
     /**
@@ -90,15 +59,21 @@ class MercadoPagoController extends Controller
      */
     public function subscriptionProcessTransaction(SubscriptionRequest $request): JsonResponse
     {
-        $shop       = auth('sanctum')->user()?->shop ?? auth('sanctum')->user()?->moderatorShop;
-        $currency   = Currency::currenciesList()->where('active', 1)->where('default', 1)->first()?->title;
+        $shop     = auth('sanctum')->user()?->shop ?? auth('sanctum')->user()?->moderatorShop;
+        $currency = Currency::currenciesList()->where('active', 1)->where('default', 1)->first()?->title;
 
         if (empty($shop)) {
-            return $this->onErrorResponse(['message' => __('errors.' . ResponseError::SHOP_NOT_FOUND, locale: $this->language)]);
+            return $this->onErrorResponse([
+                'code'    => ResponseError::ERROR_404,
+                'message' => __('errors.' . ResponseError::SHOP_NOT_FOUND, locale: $this->language)
+            ]);
         }
 
         if (empty($currency)) {
-            return $this->onErrorResponse(['message' => __('errors.' . ResponseError::CURRENCY_NOT_FOUND, locale: $this->language)]);
+            return $this->onErrorResponse([
+                'code'    => ResponseError::ERROR_404,
+                'message' => __('errors.' . ResponseError::CURRENCY_NOT_FOUND)
+            ]);
         }
 
         try {
@@ -107,7 +82,10 @@ class MercadoPagoController extends Controller
             return $this->successResponse('success', $result);
         } catch (Throwable $e) {
             $this->error($e);
-            return $this->onErrorResponse(['message' => ResponseError::ERROR_501]);
+            return $this->onErrorResponse([
+                'code'    => ResponseError::ERROR_501,
+                'message' => __('errors.' . ResponseError::ERROR_501)
+            ]);
         }
 
     }
@@ -146,20 +124,22 @@ class MercadoPagoController extends Controller
     {
         Log::error('mercado pago', [
             'all'   => $request->all(),
-            'reAll' => \request()->all(),
+            'reAll' => request()->all(),
             'input' => @file_get_contents("php://input")
         ]);
 
-//        $status = $request->input('data.object.status');
-//
-//        $status = match ($status) {
-//            'succeeded' => 'paid',
-//            default     => 'progress',
-//        };
-//
-//        $token = $request->input('data.object.id');
-//
-//        $this->service->afterHook($token, $status);
+        $status = $request->input('data.status');
+
+        $status = match ($status) {
+            'succeeded', 'successful', 'success'                         => WalletHistory::PAID,
+            'failed', 'cancelled', 'reversed', 'chargeback', 'disputed'  => WalletHistory::CANCELED,
+            default                                                      => 'progress',
+        };
+
+        $token = $request->input('data.id');
+
+        $this->service->afterHook($token, $status);
+
     }
 
 }

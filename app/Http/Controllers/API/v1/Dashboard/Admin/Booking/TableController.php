@@ -12,6 +12,7 @@ use App\Repositories\Booking\TableRepository\TableReportRepository;
 use App\Repositories\Booking\TableRepository\TableRepository;
 use App\Services\Booking\TableService\TableService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class TableController extends AdminBaseController
 {
@@ -28,27 +29,24 @@ class TableController extends AdminBaseController
      * Display a listing of the resource.
      *
      * @param FilterParamsRequest $request
-     * @return JsonResponse
+     * @return AnonymousResourceCollection
      */
-    public function index(FilterParamsRequest $request): JsonResponse
+    public function index(FilterParamsRequest $request): AnonymousResourceCollection
     {
         $model = $this->repository->paginate($request->all());
 
-        $statistic  = $this->reportRepository->bookings();
+        return TableResource::collection($model);
+    }
 
-        return $this->successResponse(__('errors.' . ResponseError::SUCCESS, locale: $this->language), [
-            'statistic' => $statistic,
-            'tables'    => TableResource::collection($model),
-            'meta'      => [
-                'current_page'  => $model->currentPage(),
-                'per_page'      => $model->perPage(),
-                'last_page'     => $model->lastPage(),
-                'total'         => $model->total(),
-                'from'          => $model->currentPage(),
-                'to'            => $model->lastPage(),
-            ],
-            'links'             => $model->links(),
-        ]);
+    /**
+     * @param FilterParamsRequest $request
+     * @return JsonResponse
+     */
+    public function statistic(FilterParamsRequest $request) {
+
+        $statistic  = $this->reportRepository->bookings($request->all());
+
+        return $this->successResponse(__('errors.' . ResponseError::SUCCESS, locale: $this->language), $statistic);
     }
 
     /**
@@ -113,20 +111,6 @@ class TableController extends AdminBaseController
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     * @param FilterParamsRequest $request
-     * @return array
-     */
-    public function disableDates(int $id, FilterParamsRequest $request): array
-    {
-        $filter = $request->merge(['id' => $id])->all();
-
-        return $this->repository->disableDates($filter);
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
      * @param FilterParamsRequest $request
      * @return JsonResponse
      */
@@ -144,6 +128,21 @@ class TableController extends AdminBaseController
         return $this->successResponse(
             __('errors.' . ResponseError::RECORD_WAS_SUCCESSFULLY_DELETED, locale: $this->language)
         );
+    }
+
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param int $id
+     * @param FilterParamsRequest $request
+     * @return array
+     */
+    public function disableDates(int $id, FilterParamsRequest $request): array
+    {
+        $filter = $request->merge(['id' => $id])->all();
+
+        return $this->repository->disableDates($filter);
     }
 
     /**

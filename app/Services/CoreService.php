@@ -167,7 +167,7 @@ abstract class CoreService
     /**
      * @param array $ids
      * @param string $column
-     * @param array|null $when
+     * @param array<string>|null $when
      * @return array
      */
     public function remove(array $ids, string $column = 'id', ?array $when = ['column' => null, 'value' => null]): array

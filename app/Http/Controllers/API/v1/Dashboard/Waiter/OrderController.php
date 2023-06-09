@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\v1\Dashboard\Waiter;
 use App\Helpers\ResponseError;
 use App\Http\Requests\FilterParamsRequest;
 use App\Http\Requests\Order\AddReviewRequest;
+use App\Http\Requests\Order\StatusUpdateRequest;
 use App\Http\Requests\Order\StoreRequest;
 use App\Http\Resources\OrderResource;
 use App\Models\Order;
@@ -16,7 +17,6 @@ use App\Services\OrderService\OrderStatusUpdateService;
 use App\Services\OrderService\OrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class OrderController extends WaiterBaseController
 {
@@ -29,29 +29,48 @@ class OrderController extends WaiterBaseController
 
     /**
      * @param Request $request
-     * @return AnonymousResourceCollection
+     * @return JsonResponse
      */
-    public function paginate(Request $request): AnonymousResourceCollection
+    public function paginate(Request $request): JsonResponse
     {
         $filter = $request->all();
         $filter['waiter_id'] = auth('sanctum')->id();
-
+        $filter['shop_id']   = auth('sanctum')->user()->invite?->shop_id;
         unset($filter['isset-waiter']);
 
         if (data_get($filter, 'empty-waiter')) {
             /** @var User $user */
             $user = auth('sanctum')->user();
             $filter['shop_ids'] = $user->invitations->pluck('shop_id')->toArray();
+            unset($filter['shop_id']);
             unset($filter['waiter_id']);
         }
 
-        $orders = $this->repository->ordersPaginate($filter);
+        $orders = $this->repository->ordersPaginate($filter, with: [
+            'shop:id,location,tax,price,price_per_km,background_img,logo_img',
+            'shop.translation'      => fn($q) => $q->where('locale', $this->language),
+            'currency'              => fn($q) => $q->select('id', 'title', 'symbol'),
+            'user:id,firstname,lastname,img',
+            'table:id,name,shop_section_id,chair_count,tax,active',
+        ]);
 
-        if (empty(data_get($filter, 'shop_ids'))) {
-            $orders = [];
-        }
+        $statistic = (new DashboardRepository)->orderByStatusStatistics($filter);
 
-        return OrderResource::collection($orders);
+        $lastPage = (new DashboardRepository)->getLastPage(
+            data_get($filter, 'perPage', 10),
+            $statistic,
+            data_get($filter, 'status')
+        );
+
+        return $this->successResponse(__('errors.' . ResponseError::SUCCESS, locale: $this->language), [
+            'statistic' => $statistic,
+            'orders'    =>  OrderResource::collection($orders),
+            'meta'      => [
+                'current_page'  => (int)data_get($filter, 'page', 1),
+                'per_page'      => (int)data_get($filter, 'perPage', 10),
+                'last_page'     => $lastPage
+            ],
+        ]);
     }
 
     /**
@@ -86,27 +105,27 @@ class OrderController extends WaiterBaseController
         /** @var Order $order */
         $order = $this->repository->orderById($id);
 
-        if (!empty(data_get($order, 'id'))) {
-            return $this->successResponse(
-                __('errors.' . ResponseError::SUCCESS, locale: $this->language),
-                OrderResource::make($order)
-            );
+        if (empty(data_get($order, 'id'))) {
+            return $this->onErrorResponse([
+                'code'      => ResponseError::ERROR_404,
+                'message'   => __('errors.' . ResponseError::ERROR_404, locale: $this->language)
+            ]);
         }
 
-        return $this->onErrorResponse([
-            'code'      => ResponseError::ERROR_404,
-            'message'   => __('errors.' . ResponseError::ERROR_404, locale: $this->language)
-        ]);
+        return $this->successResponse(
+            __('errors.' . ResponseError::SUCCESS, locale: $this->language),
+            OrderResource::make($order->loadMissing(['table']))
+        );
     }
 
     /**
      * Update Order Status details by OrderDetail ID.
      *
      * @param int $id
-     * @param FilterParamsRequest $request
+     * @param StatusUpdateRequest $request
      * @return JsonResponse
      */
-    public function orderStatusUpdate(int $id, FilterParamsRequest $request): JsonResponse
+    public function orderStatusUpdate(int $id, StatusUpdateRequest $request): JsonResponse
     {
         /** @var Order $order */
         $order = Order::with([

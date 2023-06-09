@@ -48,7 +48,7 @@ class UserService extends CoreService implements UserServiceInterface
 
             $user->syncRoles(data_get($data, 'role', 'user'));
 
-            if($user->hasRole(['moderator', 'deliveryman', 'waiter']) && is_array(data_get($data, 'shop_id'))) {
+            if($user->hasRole(['moderator', 'deliveryman', 'waiter', 'cook']) && is_array(data_get($data, 'shop_id'))) {
 
                 foreach (data_get($data, 'shop_id') as $shopId) {
 
@@ -150,7 +150,7 @@ class UserService extends CoreService implements UserServiceInterface
 
             }
 
-            if($user->hasRole(['moderator', 'deliveryman', 'waiter']) && is_array(data_get($data, 'shop_id'))) {
+            if($user->hasRole(['moderator', 'deliveryman', 'waiter', 'cook']) && is_array(data_get($data, 'shop_id'))) {
                 $user->invitations()->delete();
                 foreach (data_get($data, 'shop_id') as $shopId) {
                     $user->invitations()->withTrashed()->updateOrCreate([

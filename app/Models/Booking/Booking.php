@@ -3,6 +3,7 @@
 namespace App\Models\Booking;
 
 use App\Models\Shop;
+use App\Models\User;
 use Eloquent;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -10,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * App\Models\Booking
@@ -23,6 +25,9 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property string|null $deleted_at
+ * @property Shop|null $shop
+ * @property Collection|User[] $users
+ * @property int $users_count
  * @method static Builder|self newModelQuery()
  * @method static Builder|self newQuery()
  * @method static Builder|self query()
@@ -73,10 +78,12 @@ class Booking extends Model
             ->when(data_get($filter, 'status'), function ($query, $status) {
 
                 if ($status === 'booked') {
-                    return $query->whereDoesntHave('users', fn($b) => $b->where('end_date', '<=', now()));
+                    return $query->whereHas('users', fn($b) => $b->where('status', UserBooking::NEW));
+                } else if ($status === 'occupied') {
+                    return $query->whereHas('users', fn($b) => $b->where('status', UserBooking::ACCEPTED));
                 }
 
-                return $query->whereHas('users', fn($b) => $b->where('end_date', '>=', now()));
+                return $query->whereDoesntHave('users', fn($b) => $b->where('end_date', '>=', now()));
             });
     }
 }

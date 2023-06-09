@@ -15,7 +15,6 @@ use App\Models\Stock;
 use App\Repositories\CoreRepository;
 use App\Repositories\Interfaces\ShopRepoInterface;
 use Cache;
-use DB;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -130,53 +129,7 @@ class ShopRepository extends CoreRepository implements ShopRepoInterface
                 'location',
             ])
             ->withCount('reviews')
-            ->when(data_get($filter, 'rating'), function (Builder $q, $rating) {
 
-                $rtg = [
-                    0 => data_get($rating, 0, 0),
-                    1 => data_get($rating, 1, 5),
-                ];
-
-                $q->withAvg([
-                    'reviews' => fn(Builder $b) => $b->whereBetween('rating', $rtg)
-                ], 'rating')->whereHas('reviews',
-                    fn(Builder $b) => $b->whereBetween('rating', $rtg)
-                );
-
-            }, fn($q) => $q->withAvg('reviews', 'rating'))
-            ->when(data_get($filter, 'order_by'), function (Builder $query, $orderBy) {
-
-                switch ($orderBy) {
-                    case 'new':
-                        $query->orderBy('created_at', 'desc');
-                        break;
-                    case 'old':
-                        $query->orderBy('created_at');
-                        break;
-                    case 'best_sale':
-                        $query->withCount('orders')->orderBy('orders_count', 'desc');
-                        break;
-                    case 'low_sale':
-                        $query->withCount('orders')->orderBy('orders_count');
-                        break;
-                    case 'high_rating':
-                        $query->orderBy('reviews_avg_rating', 'desc');
-                        break;
-                    case 'low_rating':
-                        $query->orderBy('reviews_avg_rating');
-                        break;
-                    case 'trust_you':
-                        $ids = implode(', ', array_keys(Cache::get('shop-recommended-ids', [])));
-                        if (!empty($ids)) {
-                            $query->orderByRaw(DB::raw("FIELD(id, $ids) ASC"));
-                        }
-                        break;
-                }
-
-            }, fn($q) => $q->orderBy(
-                data_get($filter, 'column', 'id'),
-                data_get($filter, 'sort', 'desc')
-            ))
             ->paginate(data_get($filter, 'perPage', 10));
     }
 
@@ -425,7 +378,8 @@ class ShopRepository extends CoreRepository implements ShopRepoInterface
         $locale  = data_get(Language::languagesList()->where('default', 1)->first(), 'locale');
 
         $recommended = Product::with([
-            'stock' => fn($q) => $q->with([
+            'stock' => fn($q) => $q
+                ->with([
                 'bonus' => fn($q) => $q->where('expired_at', '>', now())->select([
                     'id', 'expired_at', 'bonusable_type', 'bonusable_id',
                     'bonus_quantity', 'value', 'type', 'status'
@@ -474,7 +428,8 @@ class ShopRepository extends CoreRepository implements ShopRepoInterface
                 'translation' => fn($q) => $q->where('locale', $this->language)
                     ->select('id', 'locale', 'title', 'category_id'),
 
-                'products' => fn($q) => $q->with([
+                'products' => fn($q) => $q
+                    ->with([
                     'discounts' => fn($q) => $q
                         ->where('start', '<=', today())
                         ->where('end', '>=', today())
@@ -502,7 +457,8 @@ class ShopRepository extends CoreRepository implements ShopRepoInterface
                         'addon',
                     ]),
                 'products.translation' => fn($q) => $q->where('locale', $this->language),
-                'products.stock' => fn($q) => $q->with([
+                'products.stock' => fn($q) => $q
+                    ->with([
                     'bonus' => fn($q) => $q->where('expired_at', '>', now())->select([
                         'id', 'expired_at', 'bonusable_type', 'bonusable_id',
                         'bonus_quantity', 'value', 'type', 'status'
@@ -511,7 +467,8 @@ class ShopRepository extends CoreRepository implements ShopRepoInterface
                     ->select([
                         'id', 'countable_type', 'countable_id', 'price', 'quantity', 'addon'
                     ])
-                    ->where('quantity', '>', 0)->where('addon', false),
+                    ->where('quantity', '>', 0)
+                    ->where('addon', false),
             ])
             ->whereHas('products', fn($q) => $q
                 ->select([

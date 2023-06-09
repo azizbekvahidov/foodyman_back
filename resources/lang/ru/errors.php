@@ -99,7 +99,9 @@ return [
     $e::LANGUAGE_NOT_FOUND              => 'Язык не найден',
     $e::CANT_DELETE_ORDERS              => 'Не могу удалить заказы :ids',
     $e::CANT_UPDATE_ORDERS              => 'Не могу обновить заказы :ids',
+    $e::BOOKING_STATUS_CHANGED          => 'Статус вашей брони изменен на :status',
     $e::STATUS_CHANGED                  => 'Статус вашего заказа изменен на :status',
+    $e::ADD_CASHBACK                    => 'Добавлен кэшбек',
     $e::PAYOUT_ACCEPTED                 => 'Выплата уже :status',
     $e::CANT_DELETE_IDS                 => 'Не могу удалить :ids',
     $e::USER_NOT_FOUND                  => 'Пользователь не найден',
@@ -126,4 +128,5 @@ return [
     $e::ORDER_OR_DELIVERYMAN_IS_EMPTY   => 'Заказ не найден или курьер не прикреплен',
     $e::TABLE_BOOKING_EXISTS            => 'У этого стола уже есть бронь. От :start_date до :end_date',
     $e::DELIVERYMAN_SETTING_EMPTY       => 'У вас не заданы настройки',
+    $e::NEW_BOOKING                     => 'Новая бронь',
 ];

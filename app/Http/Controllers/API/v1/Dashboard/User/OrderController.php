@@ -9,6 +9,7 @@ use App\Http\Requests\Order\UserStoreRequest;
 use App\Http\Resources\OrderResource;
 use App\Models\Cart;
 use App\Models\Order;
+use App\Models\PushNotification;
 use App\Models\Settings;
 use App\Models\User;
 use App\Repositories\Interfaces\OrderRepoInterface;
@@ -109,7 +110,7 @@ class OrderController extends UserBaseController
             data_get($tokens, 'tokens'),
             "New order was created",
             data_get($result, 'data.id'),
-            data_get($result, 'data')?->setAttribute('type', 'new_order')?->only(['id', 'status']),
+            data_get($result, 'data')?->setAttribute('type', PushNotification::NEW_ORDER)?->only(['id', 'status', 'type']),
             data_get($tokens, 'ids', [])
         );
 

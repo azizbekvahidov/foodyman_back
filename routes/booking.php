@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\API\v1\Dashboard\{Admin, Seller, User};
+use App\Http\Controllers\API\v1\Dashboard\{Admin, Seller, User, Waiter};
 use App\Http\Controllers\API\v1\Rest\Booking\{BookingController,
     ShopController,
     ShopSectionController,
@@ -65,6 +65,8 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
 
         /* Tables */
         Route::apiResource('tables', TableController::class)->only(['index', 'show']);
+        Route::get('disable-dates/table/{id}',  [TableController::class, 'disableDates']);
+
     });
 
     Route::group(['prefix' => 'dashboard'], function () {
@@ -73,8 +75,8 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
         Route::group(['prefix' => 'user', 'middleware' => ['sanctum.check'], 'as' => 'user.'], function () {
 
             /* User Bookings */
-            Route::apiResource('my-bookings', User\Booking\UserBookingController::class);
-            Route::delete('my-bookings/delete',        [User\Booking\UserBookingController::class, 'destroy']);
+            Route::apiResource('my-bookings',   User\Booking\UserBookingController::class);
+            Route::delete('my-bookings/delete', [User\Booking\UserBookingController::class, 'destroy']);
 
             /* Bookings */
             Route::apiResource('bookings', User\Booking\BookingController::class)->only(['index', 'show']);
@@ -97,14 +99,16 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
 
             /* User Bookings */
             Route::apiResource('user-bookings', Seller\Booking\UserBookingController::class);
+            Route::post('user-booking/status/{id}', [Seller\Booking\UserBookingController::class, 'statusUpdate']);
             Route::delete('user-bookings/delete',   [Seller\Booking\UserBookingController::class, 'destroy']);
 
             /* Shop Section */
             Route::apiResource('shop-sections', Seller\Booking\ShopSectionController::class);
-            Route::delete('shop-sections/delete',        [Seller\Booking\ShopSectionController::class, 'destroy']);
+            Route::delete('shop-sections/delete',   [Seller\Booking\ShopSectionController::class, 'destroy']);
 
             /* Tables */
-            Route::apiResource('tables', Seller\Booking\TableController::class);
+            Route::apiResource('tables',  Seller\Booking\TableController::class);
+            Route::get('table/statistic',           [Seller\Booking\TableController::class, 'statistic']);
             Route::get('disable-dates/table/{id}',  [Seller\Booking\TableController::class, 'disableDates']);
             Route::delete('tables/delete',          [Seller\Booking\TableController::class, 'destroy']);
 
@@ -117,6 +121,44 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
                 /* Shop Closed Days */
                 Route::apiResource('shop-closed-dates', Seller\Booking\ShopClosedDateController::class);
                 Route::delete('shop-closed-dates/delete', [Seller\Booking\ShopClosedDateController::class, 'destroy']);
+
+            });
+
+        });
+
+        // WAITER BLOCK
+        Route::group(['prefix' => 'waiter', 'middleware' => ['sanctum.check', 'role:waiter'], 'as' => 'waiter.'], function () {
+
+            /* Bookings */
+            Route::apiResource('bookings', Waiter\Booking\BookingController::class);
+            Route::post('user-booking/status/{id}', [Waiter\Booking\UserBookingController::class, 'statusUpdate']);
+
+            Route::delete('bookings/delete',        [Waiter\Booking\BookingController::class, 'destroy']);
+
+            /* User Bookings */
+            Route::apiResource('user-bookings', Waiter\Booking\UserBookingController::class);
+            Route::delete('user-bookings/delete',   [Waiter\Booking\UserBookingController::class, 'destroy']);
+
+            /* Shop Section */
+            Route::apiResource('shop-sections', Waiter\Booking\ShopSectionController::class);
+            Route::delete('shop-sections/delete',   [Waiter\Booking\ShopSectionController::class, 'destroy']);
+
+            /* Tables */
+            Route::apiResource('tables',  Waiter\Booking\TableController::class);
+            Route::get('table/statistic',           [Waiter\Booking\TableController::class, 'statistic']);
+            Route::get('disable-dates/table/{id}',  [Waiter\Booking\TableController::class, 'disableDates']);
+            Route::delete('tables/delete',          [Waiter\Booking\TableController::class, 'destroy']);
+
+            Route::group(['prefix' => 'booking'], function () {
+
+                /* Shop Working Days */
+                Route::apiResource('shop-working-days', Waiter\Booking\ShopWorkingDayController::class);
+                Route::delete('shop-working-days/delete', [Waiter\Booking\ShopWorkingDayController::class, 'destroy']);
+
+                /* Shop Closed Days */
+                Route::apiResource('shop-closed-dates', Waiter\Booking\ShopClosedDateController::class);
+                Route::delete('shop-closed-dates/delete', [Waiter\Booking\ShopClosedDateController::class, 'destroy']);
+
             });
 
         });
@@ -134,6 +176,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
 
             /* User Bookings */
             Route::apiResource('user-bookings', Admin\Booking\UserBookingController::class);
+            Route::post('user-booking/status/{id}', [Admin\Booking\UserBookingController::class, 'statusUpdate']);
             Route::delete('user-bookings/delete',   [Admin\Booking\UserBookingController::class, 'destroy']);
             Route::get('user-bookings/drop/all',    [Admin\Booking\UserBookingController::class, 'dropAll']);
             Route::get('user-bookings/restore/all', [Admin\Booking\UserBookingController::class, 'restoreAll']);
@@ -148,6 +191,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
 
             /* Tables */
             Route::apiResource('tables',        Admin\Booking\TableController::class);
+            Route::get('table/statistic',           [Admin\Booking\TableController::class, 'statistic']);
             Route::get('disable-dates/table/{id}',  [Admin\Booking\TableController::class, 'disableDates']);
             Route::delete('tables/delete',          [Admin\Booking\TableController::class, 'destroy']);
             Route::get('tables/drop/all',           [Admin\Booking\TableController::class, 'dropAll']);

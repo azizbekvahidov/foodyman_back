@@ -63,6 +63,13 @@ class BlogController extends RestBaseController
     {
         $show = $this->blogRepository->lastShow();
 
+        if (empty($show)) {
+            return $this->onErrorResponse([
+                'code'    => ResponseError::ERROR_404,
+                'message' => __('errors.' . ResponseError::ERROR_404, locale: $this->language)
+            ]);
+        }
+
         return $this->successResponse(
             __('errors.'. ResponseError::NO_ERROR, locale: $this->language),
             BlogResource::make($show)

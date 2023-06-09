@@ -6,6 +6,7 @@ use App\Helpers\ResponseError;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ReferralResource;
 use App\Models\EmailSetting;
+use App\Models\Order;
 use App\Models\Referral;
 use App\Models\Settings;
 use App\Models\Translation;
@@ -127,6 +128,26 @@ class SettingController extends Controller
             'Composer Version'  => $composer,
             'error'             => $error,
             'mail errors'       => $errors,
+        ]);
+    }
+
+    /**
+     * @return JsonResponse
+     */
+    public function stat(): JsonResponse
+    {
+        $users = DB::table('users')
+            ->select(['id'])
+            ->count('id');
+
+        $orders = DB::table('orders')
+            ->select(['id', 'status'])
+            ->where('status', Order::STATUS_DELIVERED)
+            ->count('id');
+
+        return $this->successResponse(__('errors.' . ResponseError::SUCCESS, locale: $this->language), [
+            'users'  => $users,
+            'orders' => $orders
         ]);
     }
 

@@ -51,8 +51,8 @@ class RestProductRepository extends CoreRepository
                 'translation' => fn($q) => $q->where('locale', $this->language)->orWhere('locale', $locale),
                 'shop' => fn($q) => $q->select('id', 'status')
                     ->when(data_get($filter, 'shop_status'), function ($q, $status) {
-                        $q->where('status', '=', $status);
-                    }
+                            $q->where('status', '=', $status);
+                        }
                     ),
                 'shop.translation' => fn($q) => $q->where('locale', $this->language)
                     ->select('id', 'locale', 'title', 'shop_id'),
@@ -111,10 +111,13 @@ class RestProductRepository extends CoreRepository
                         break;
                 }
 
-            }, fn($q) => $q->orderBy(
-                data_get($filter, 'column', 'id'),
-                data_get($filter, 'sort', 'desc')
-            ))
+            })
+            ->when(data_get($filter, 'column'), function (Builder $query, $column) use ($filter) {
+                $query->orderBy(
+                    $column,
+                    data_get($filter, 'sort', 'desc')
+                );
+            })
             ->paginate(data_get($filter, 'perPage', 10));
     }
 
@@ -128,13 +131,13 @@ class RestProductRepository extends CoreRepository
             })
             ->withAvg('reviews', 'rating')
             ->withCount('orderDetails')
+            ->withCount('stocks')
             ->with([
-                'stocks' => fn($q) => $q->where('quantity', '>', 0),
-                'stocks.stockExtras.group.translation' => fn($q) => $q->where('locale', $this->language),
-                'translation' => fn($q) => $q->where('locale', $this->language)
-                    ->select('id', 'product_id', 'locale', 'title'),
+                'stock' => fn($q) => $q->where('quantity', '>', 0),
+                'stock.stockExtras.group.translation' => fn($q) => $q->where('locale', $this->language),
+                'translation' => fn($q) => $q->where('locale', $this->language),
                 ])
-            ->whereHas('stocks', function ($item){
+            ->whereHas('stock', function ($item){
                 $item->where('quantity', '>', 0);
             })
             ->whereHas('shop', function ($item) {
@@ -233,6 +236,7 @@ class RestProductRepository extends CoreRepository
             ->where('active', true)
             ->where('addon', false)
             ->where('status', Product::PUBLISHED)
-            ->firstWhere('uuid', $uuid);
+            ->where('uuid', $uuid)
+            ->first();
     }
 }

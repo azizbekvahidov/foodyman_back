@@ -24,11 +24,15 @@ class StoreRequest extends BaseRequest
                 'integer',
                 Rule::exists('users', 'id')->whereNull('deleted_at')
             ],
+            'cook_id'               => [
+                'integer',
+                Rule::exists('users', 'id')->whereNull('deleted_at')
+            ],
             'table_id'              => 'integer',
             'booking_id'            => 'integer',
             'user_booking_id'       => 'integer',
             'currency_id'           => 'required|integer|exists:currencies,id',
-            'rate'                  => 'required|numeric',
+            'rate'                  => 'numeric',
             'shop_id'               => [
                 'required',
                 'integer',
@@ -39,8 +43,8 @@ class StoreRequest extends BaseRequest
             'delivery_type'         => ['required', Rule::in(Order::DELIVERY_TYPES)],
             'coupon'                => 'nullable|string',
             'location'              => 'array',
-            'location.latitude'     => 'required|numeric',
-            'location.longitude'    => 'required|numeric',
+            'location.latitude'     => 'numeric',
+            'location.longitude'    => 'numeric',
             'address'               => 'array',
             'address_id'            => ['integer', Rule::exists('user_addresses', 'id')],
             'phone'                 => 'string',

@@ -26,7 +26,7 @@ class PaymentPayloadService extends CoreService
             return $prepareValidate;
         }
 
-        if (!Cache::get('tytkjbjkfr.reprijvbv') || data_get(Cache::get('tytkjbjkfr.reprijvbv'), 'active') != 1) {
+        if (!Cache::get('fbghyjfrn.werbpsv') || data_get(Cache::get('fbghyjfrn.werbpsv'), 'active') != 1) {
             abort(403);
         }
 
@@ -61,7 +61,7 @@ class PaymentPayloadService extends CoreService
                 return $prepareValidate;
             }
 
-            if (!Cache::get('tytkjbjkfr.reprijvbv') || data_get(Cache::get('tytkjbjkfr.reprijvbv'), 'active') != 1) {
+            if (!Cache::get('fbghyjfrn.werbpsv') || data_get(Cache::get('fbghyjfrn.werbpsv'), 'active') != 1) {
                 abort(403);
             }
 
@@ -170,6 +170,19 @@ class PaymentPayloadService extends CoreService
         } else if ($payment->tag === 'paytabs') {
 
             $validator = $this->payTabs($data);
+
+            if ($validator->fails()) {
+                return [
+                    'status'    => false,
+                    'code'      => ResponseError::ERROR_422,
+                    'params'    => $validator->errors()->toArray(),
+                ];
+            }
+
+            return ['status' => true];
+        } else if ($payment->tag === 'mercadoPago') {
+
+            $validator = $this->mercadoPago($data);
 
             if ($validator->fails()) {
                 return [
@@ -292,6 +305,22 @@ class PaymentPayloadService extends CoreService
             'payload.server_key'    => 'required|string',
             'payload.client_key'    => 'required|string',
             'payload.currency'      => [
+                'required',
+                Rule::exists('currencies', 'title')->whereNull('deleted_at')
+            ],
+        ]);
+    }
+
+    /**
+     * @param array $data
+     * @return \Illuminate\Contracts\Validation\Validator|\Illuminate\Validation\Validator
+     */
+    public function mercadoPago(array $data): \Illuminate\Contracts\Validation\Validator|\Illuminate\Validation\Validator
+    {
+        return Validator::make($data, [
+            'payload.token'     => 'required|string',
+            'payload.sandbox'   => 'required|in:0,1',
+            'payload.currency'  => [
                 'required',
                 Rule::exists('currencies', 'title')->whereNull('deleted_at')
             ],

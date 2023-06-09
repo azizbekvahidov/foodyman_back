@@ -2,6 +2,7 @@
 
 namespace App\Models\Booking;
 
+use App\Models\Settings;
 use Eloquent;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -71,15 +72,17 @@ class Table extends Model
                 });
 
             })
-            ->when(data_get($filter, 'date_from'), function ($query, $dateFrom) use ($filter) {
+            ->when(data_get($filter, 'date_from'), function ($query) use ($filter) {
 
-                $query->whereHas('users', function ($q) use ($dateFrom, $filter) {
+                $minTime  = Settings::adminSettings()->where('key', 'min_reservation_time')->first()?->value;
 
-                    $dateTo = data_get($filter, 'date_to');
+                $dateFrom = date('Y-m-d H:i:01', strtotime(data_get($filter, 'date_from', now())));
+                $dateTo   = date('Y-m-d H:i:59', strtotime(data_get($filter, 'date_to', $minTime ? "-$minTime hour" : now())));
 
+                $query->whereHas('users', function ($q) use ($dateFrom, $dateTo, $filter) {
                     $q
                         ->where('start_date', '>=', $dateFrom)
-                        ->when($dateTo, fn($b) => $b->where('end_date', '<=', $dateTo));
+                        ->when(data_get($filter, 'date_to'), fn($b) => $b->where('start_date', '<=', $dateTo));
                 });
 
             })
@@ -95,7 +98,9 @@ class Table extends Model
             ->when(data_get($filter, 'status'), function ($query, $status) {
 
                 if ($status === 'booked') {
-                    return $query->whereHas('users', fn($b) => $b->where('end_date', '<=', now()));
+                    return $query->whereHas('users', fn($b) => $b->where('status', UserBooking::NEW));
+                } else if ($status === 'occupied') {
+                    return $query->whereHas('users', fn($b) => $b->where('status', UserBooking::ACCEPTED));
                 }
 
                 return $query->whereDoesntHave('users', fn($b) => $b->where('end_date', '>=', now()));

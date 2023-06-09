@@ -13,6 +13,8 @@ use App\Repositories\Booking\TableRepository\TableReportRepository;
 use App\Repositories\Booking\TableRepository\TableRepository;
 use App\Services\Booking\TableService\TableService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use function React\Promise\all;
 
 class TableController extends SellerBaseController
 {
@@ -29,27 +31,24 @@ class TableController extends SellerBaseController
      * Display a listing of the resource.
      *
      * @param FilterParamsRequest $request
+     * @return AnonymousResourceCollection
+     */
+    public function index(FilterParamsRequest $request): AnonymousResourceCollection
+    {
+        $model = $this->repository->paginate($request->merge(['shop_id' => $this->shop->id])->all());
+
+        return TableResource::collection($model);
+    }
+
+    /**
+     * @param FilterParamsRequest $request
      * @return JsonResponse
      */
-    public function index(FilterParamsRequest $request): JsonResponse
-    {
-        $model = $this->repository->paginate($request->all());
+    public function statistic(FilterParamsRequest $request) {
 
-        $statistic  = $this->reportRepository->bookings();
+        $statistic  = $this->reportRepository->bookings($request->merge(['shop_id' => $this->shop->id])->all());
 
-        return $this->successResponse(__('errors.' . ResponseError::SUCCESS, locale: $this->language), [
-            'statistic' => $statistic,
-            'tables'    => TableResource::collection($model),
-            'meta'      => [
-                'current_page'  => $model->currentPage(),
-                'per_page'      => $model->perPage(),
-                'last_page'     => $model->lastPage(),
-                'total'         => $model->total(),
-                'from'          => $model->currentPage(),
-                'to'            => $model->lastPage(),
-            ],
-            'links'             => $model->links(),
-        ]);
+        return $this->successResponse(__('errors.' . ResponseError::SUCCESS, locale: $this->language), $statistic);
     }
 
     /**
@@ -154,6 +153,7 @@ class TableController extends SellerBaseController
 
         return $this->repository->disableDates($filter);
     }
+
 
     /**
      * Remove the specified resource from storage.

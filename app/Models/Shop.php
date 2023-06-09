@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Helpers\Utility;
 use App\Traits\Loadable;
+use App\Traits\Reviewable;
 use App\Traits\SetCurrency;
 use Database\Factories\ShopFactory;
 use DB;
@@ -48,7 +49,6 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
- * @property string|null $mark
  * @property int|null $service_fee
  * @property int|null $type
  * @property array|null $delivery_time
@@ -101,7 +101,6 @@ use Illuminate\Support\Carbon;
  * @method static Builder|Shop whereId($value)
  * @method static Builder|Shop whereLocation($value)
  * @method static Builder|Shop whereLogoImg($value)
- * @method static Builder|Shop whereMark($value)
  * @method static Builder|Shop whereMinAmount($value)
  * @method static Builder|Shop whereOpen($value)
  * @method static Builder|Shop whereOpenTime($value)
@@ -120,7 +119,7 @@ use Illuminate\Support\Carbon;
  */
 class Shop extends Model
 {
-    use HasFactory, SoftDeletes, Loadable, SetCurrency;
+    use HasFactory, SoftDeletes, Loadable, SetCurrency, Reviewable;
 
     protected $guarded = ['id'];
 
@@ -294,7 +293,6 @@ class Shop extends Model
 
     public function scopeUpdatedDate($query, $updatedDate)
     {
-        $query->where('updated_at', '>', $updatedDate);
     }
 
     public function scopeFilter($query, $filter)
@@ -331,7 +329,7 @@ class Shop extends Model
                 ->reject(fn($data) => empty($data))
                 ->toArray();
 
-            asort($orders);
+            arsort($orders);
         }
 
         $query
@@ -364,10 +362,12 @@ class Shop extends Model
                 });
             })
             ->when(data_get($filter, 'deals'), function (Builder $query) {
-                $query->whereHas('bonus', function ($q) {
-                    $q->where('expired_at', '>=', now());
-                })->orWhereHas('discounts', function ($q) {
-                    $q->where('end', '>=', now())->where('active', 1);
+                $query->where(function ($query) {
+                    $query->whereHas('bonus', function ($q) {
+                        $q->where('expired_at', '>=', now());
+                    })->orWhereHas('discounts', function ($q) {
+                        $q->where('end', '>=', now())->where('active', 1);
+                    });
                 });
             })
             ->when(data_get($filter, 'work_24_7'), function (Builder $query) {
@@ -378,17 +378,14 @@ class Shop extends Model
             })
             ->when(data_get($filter, 'address'), function ($query) use ($filter, $orders) {
                 $orderBys = ['new', 'old', 'best_sale', 'low_sale', 'high_rating', 'low_rating', 'trust_you'];
-                $orderByIds = implode(', ', array_keys($orders));
+                $orderByIds = implode(',', array_keys($orders));
 
                 $query
                     ->whereHas('deliveryZone')
-                    ->when($orderByIds, function ($builder) use ($orderBys, $filter, $orderByIds) {
-
-                        if (!in_array(data_get($filter, 'order_by'), $orderBys)) {
-                            $builder->orderByRaw(DB::raw("FIELD(shops.id, $orderByIds) ASC"));
-                        }
-
-                    });
+                    ->when($orderByIds && !in_array(data_get($filter, 'order_by'), $orderBys),
+                        function ($builder) use ($filter, $orderByIds, $orders) {
+                            $builder->whereIn('id', array_keys($orders))->orderByRaw("FIELD(shops.id, $orderByIds) ASC");
+                        });
 
             })
             ->when(data_get($filter, 'search'), function ($query, $search) {

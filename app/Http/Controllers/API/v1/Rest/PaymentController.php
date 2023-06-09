@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\v1\Rest;
 
 use App\Helpers\ResponseError;
+use App\Http\Requests\FilterParamsRequest;
 use App\Http\Resources\PaymentResource;
 use App\Models\Payment;
 use App\Repositories\PaymentRepository\PaymentRepository;
@@ -26,14 +27,16 @@ class PaymentController extends RestBaseController
     /**
      * Display a listing of the resource.
      *
+     * @param FilterParamsRequest $request
      * @return AnonymousResourceCollection
      */
-    public function index(): AnonymousResourceCollection
+    public function index(FilterParamsRequest $request): AnonymousResourceCollection
     {
-        $payments = $this->repository->paymentsList(['active' => 1]);
+        $payments = $this->repository->paymentsList($request->merge(['active' => 1])->all());
 
         return PaymentResource::collection($payments);
     }
+
 
     /**
      * Display the specified resource.
@@ -47,16 +50,10 @@ class PaymentController extends RestBaseController
         $payment = $this->repository->paymentDetails($id);
 
         if (!$payment || !$payment->active) {
-            return $this->onErrorResponse([
-                'code'    => ResponseError::ERROR_404,
-                'message' => __('errors.' . ResponseError::ERROR_404, locale: $this->language)
-            ]);
+            return $this->onErrorResponse(['code' => ResponseError::ERROR_404]);
         }
 
-        return $this->successResponse(
-            __('errors.' . ResponseError::SUCCESS, locale: $this->language),
-            PaymentResource::make($payment)
-        );
+        return $this->successResponse(__('web.payment_found'), PaymentResource::make($payment));
     }
 
 }

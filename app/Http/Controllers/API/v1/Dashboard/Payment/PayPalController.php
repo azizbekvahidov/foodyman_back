@@ -71,7 +71,7 @@ class PayPalController extends Controller
             $paymentPayload = PaymentPayload::where('payment_id', $payment?->id)->first();
             $payload        = $paymentPayload?->payload;
             $order          = Order::find($request->input('order_id'));
-            $totalPrice     = ceil($order->rate_total_price) * 100;
+            $totalPrice     = ceil($order->rate_total_price * 2 * 100) / 2;
 
             $order->update([
                 'total_price' => ($totalPrice / $order->rate) / 100

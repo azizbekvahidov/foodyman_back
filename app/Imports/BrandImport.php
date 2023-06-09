@@ -18,11 +18,8 @@ class BrandImport extends BaseImport implements ToCollection, WithHeadingRow, Wi
      * @param Collection $collection
      * @return void
      */
-    public function collection(Collection $collection)
+    public function collection(Collection $collection): void
     {
-        if (!Cache::get('tytkjbjkfr.reprijvbv') || data_get(Cache::get('tytkjbjkfr.reprijvbv'), 'active') != 1) {
-            abort(403);
-        }
         foreach ($collection as $row) {
 
             if (!data_get($row, 'title')) {
@@ -46,6 +43,11 @@ class BrandImport extends BaseImport implements ToCollection, WithHeadingRow, Wi
 
     public function batchSize(): int
     {
-        return 10;
+        return 200;
+    }
+
+    public function chunkSize(): int
+    {
+        return 200;
     }
 }

@@ -2,12 +2,8 @@
 
 namespace App\Imports;
 
-use App\Helpers\FileHelper;
-use App\Models\Brand;
-use App\Models\Category;
-use App\Models\Order;
 use App\Models\Product;
-use App\Models\User;
+use App\Models\Settings;
 use App\Traits\Loggable;
 use Carbon\Carbon;
 use DB;
@@ -21,11 +17,11 @@ class BaseImport
     use Loggable;
 
     /**
-     * @param Model|User $model
+     * @param Product|Model $model
      * @param string|null $imgUrls
      * @return bool
      */
-    protected function downloadImages(Model $model, ?string $imgUrls): bool
+    protected function downloadImages(mixed $model, ?string $imgUrls): bool
     {
         try {
 
@@ -55,8 +51,12 @@ class BaseImport
                 $name     = substr(strrchr(Str::replace(['https://', 'http://'], '', $url), "."), 1);
 
                 foreach ($images as $image) {
+
                     $storage[] = "$dir/$date.$name";
-                    Storage::disk('public')->put("images/$dir/$date.$name", $image, 'public');
+
+                    $isAws = Settings::adminSettings()->where('key', 'aws')->first()?->value;
+
+                    Storage::disk($isAws ? 's3' : 'public')->put("images/$dir/$date.$name", $image, 'public');
                 }
 
             }
@@ -64,7 +64,7 @@ class BaseImport
             DB::transaction(function () use ($model, $storage) {
                 $model?->galleries()->delete();
 
-                $model->update(['img' => data_get($storage, 0)]);
+                $model?->update(['img' => data_get($storage, 0)]);
 
                 $model?->uploads($storage);
             });

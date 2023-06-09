@@ -13,7 +13,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-
         $this->call(LanguageSeeder::class);
         $this->call(CurrencySeeder::class);
         $this->call(RoleSeeder::class);
@@ -27,7 +26,6 @@ class DatabaseSeeder extends Seeder
         $this->call(PaymentSeeder::class);
         $this->call(NotificationSeeder::class);
         $this->call(OrderSeeder::class);
-
 //        if (app()->environment() == 'local') {
 //            Category::factory()->hasTranslations(1)->count(10)->create();
 //            Brand::factory()->count(10)->create();

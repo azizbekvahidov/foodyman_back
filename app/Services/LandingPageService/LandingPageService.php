@@ -27,7 +27,7 @@ class LandingPageService extends CoreService
         try {
             $model = DB::transaction(function () use ($data) {
                 /** @var LandingPage $model */
-                $model = $this->model()->create($data);
+                $model = $this->model()->withTrashed()->updateOrCreate(['type' => $data['type']], $data);
 
                 if (data_get($data, 'images.0')) {
                     $model->uploads(data_get($data, 'images'));

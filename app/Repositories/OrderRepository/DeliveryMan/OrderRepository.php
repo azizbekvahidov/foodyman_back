@@ -28,6 +28,7 @@ class OrderRepository extends CoreRepository
                 'transaction.paymentSystem',
                 'shop.translation' => fn($q) => $q->where('locale', $this->language),
                 'user',
+                'deliveryman',
             ])
             ->orderBy(data_get($data, 'column', 'id'), data_get($data, 'sort', 'desc'))
             ->paginate(data_get($data, 'perPage', 10));

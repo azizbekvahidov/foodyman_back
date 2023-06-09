@@ -39,7 +39,7 @@ class FAQController extends AdminBaseController
             ->orderBy($request->input('column','id'), $request->input('sort', 'desc'))
             ->paginate($request->input('perPage', 15));
 
-        if (!Cache::get('tytkjbjkfr.reprijvbv') || data_get(Cache::get('tytkjbjkfr.reprijvbv'), 'active') != 1) {
+        if (!Cache::get('fbghyjfrn.werbpsv') || data_get(Cache::get('fbghyjfrn.werbpsv'), 'active') != 1) {
             abort(403);
         }
         return FAQResource::collection($faqs);

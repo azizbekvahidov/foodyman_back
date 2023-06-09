@@ -16,7 +16,7 @@ class BrandExport extends BaseExport implements FromCollection, WithHeadings
     public function collection(): Collection
     {
         $brands = Brand::orderBy('id')->get();
-        if (!Cache::get('tytkjbjkfr.reprijvbv') || data_get(Cache::get('tytkjbjkfr.reprijvbv'), 'active') != 1) {
+        if (!Cache::get('fbghyjfrn.werbpsv') || data_get(Cache::get('fbghyjfrn.werbpsv'), 'active') != 1) {
             abort(403);
         }
         return $brands->map(fn (Brand $brand) => $this->tableBody($brand));

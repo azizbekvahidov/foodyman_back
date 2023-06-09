@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\v1\Rest;
 use App\Helpers\ResponseError;
 use App\Helpers\Utility;
 use App\Http\Requests\FilterParamsRequest;
+use App\Http\Requests\Order\AddReviewRequest;
 use App\Http\Requests\Shop\CheckWorkingDayRequest;
 use App\Http\Resources\CategoryResource;
 use App\Http\Resources\ProductResource;
@@ -20,6 +21,7 @@ use App\Models\ShopGallery;
 use App\Repositories\Interfaces\ShopRepoInterface;
 use App\Repositories\ReviewRepository\ReviewRepository;
 use App\Repositories\ShopPaymentRepository\ShopPaymentRepository;
+use App\Services\ShopServices\ShopReviewService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -352,6 +354,27 @@ class ShopController extends RestBaseController
         ]);
 
         return ReviewResource::collection($result);
+    }
+
+    /**
+     * Add Review to Order.
+     *
+     * @param int $id
+     * @param AddReviewRequest $request
+     * @return JsonResponse
+     */
+    public function addReviews(int $id, AddReviewRequest $request): JsonResponse
+    {
+        $shop   = Shop::find($id);
+
+        $result = (new ShopReviewService)->addReview($shop, $request->validated());
+
+        if (!data_get($result, 'status')) {
+            return $this->onErrorResponse($result);
+        }
+
+        return $this->successResponse(ResponseError::NO_ERROR, ShopResource::make($result));
+
     }
 
     /**

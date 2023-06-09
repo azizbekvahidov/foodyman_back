@@ -4,12 +4,19 @@ namespace App\Services\Booking\BookingService;
 
 use App\Helpers\ResponseError;
 use App\Models\Booking\UserBooking;
+use App\Models\Language;
+use App\Models\PushNotification;
+use App\Models\Translation;
 use App\Services\CoreService;
+use App\Traits\Notification;
+use DB;
 use Exception;
 use Throwable;
 
 class UserBookingService extends CoreService
 {
+    use Notification;
+
     protected function getModelClass(): string
     {
         return UserBooking::class;
@@ -18,25 +25,66 @@ class UserBookingService extends CoreService
     public function create(array $data): array
     {
         try {
-            $userBooking = UserBooking::where([
-                ['table_id', data_get($data, 'table_id')],
-                ['start_date', '>=', data_get($data, 'start_date')],
-                ['end_date', '<=', data_get($data, 'end_date')],
-                ['status', UserBooking::NEW],
-            ])
-                ->first();
 
-            if ($userBooking) {
-                throw new Exception(__('errors.' . ResponseError::TABLE_BOOKING_EXISTS, [
-                    'start_date' => data_get($data, 'start_date'),
-                    'end_date'   => data_get($data, 'end_date'),
-                ], $this->language));
-            }
+            $model = DB::transaction(function () use ($data) {
+
+                $where = [
+                    ['table_id', data_get($data, 'table_id')],
+                    ['start_date', '>=', data_get($data, 'start_date')],
+                    ['status', UserBooking::NEW],
+                ];
+
+                if (data_get($data, 'end_date')) {
+                    $where[] = ['end_date', '<=', data_get($data, 'end_date')];
+                }
+
+                $userBooking = UserBooking::where($where)->first();
+
+                if ($userBooking) {
+                    throw new Exception(__('errors.' . ResponseError::TABLE_BOOKING_EXISTS, [
+                        'start_date' => data_get($data, 'start_date'),
+                        'end_date'   => data_get($data, 'end_date'),
+                    ], $this->language));
+                }
+
+                /** @var UserBooking $model */
+
+                $model  = $this->model()->create($data)->load([
+                    'booking:id,shop_id',
+                    'booking.shop:id,user_id',
+                    'booking.shop.seller:id,firebase_token',
+
+                    'table:shop_section_id,id',
+                    'table.shopSection:id,shop_id',
+                    'table.shopSection.shop:id,user_id',
+                    'table.shopSection.shop.seller:id,firebase_token',
+                ]);
+
+                $seller = $model->booking?->shop?->seller;
+
+                if (empty($seller)) {
+                    $seller = $model->table->shopSection->shop->seller;
+                }
+
+                $this->sendNotification(
+                    is_array($seller?->firebase_token) ? $seller->firebase_token : [],
+                    __('errors.' . ResponseError::NEW_BOOKING, locale: $this->language),
+                    $model->id,
+                    [
+                        'id'     => $model->id,
+                        'status' => UserBooking::NEW,
+                        'type'   => PushNotification::BOOKING_STATUS
+                    ],
+                    [$seller->id]
+                );
+
+                return $model;
+            });
 
             return [
                 'status'    => true,
                 'code'      => ResponseError::NO_ERROR,
-                'data'      => $this->model()->create($data),
+                'data'      => $model,
             ];
         } catch (Throwable $e) {
             $this->error($e);
@@ -52,14 +100,18 @@ class UserBookingService extends CoreService
     public function update(UserBooking $model, array $data): array
     {
         try {
-            $userBooking = UserBooking::where([
+            $where = [
                 ['id', '!=', $model->id],
                 ['table_id', data_get($data, 'table_id')],
                 ['start_date', '>=', data_get($data, 'start_date')],
-                ['end_date', '<=', data_get($data, 'end_date')],
                 ['status', UserBooking::NEW],
-            ])
-                ->exists();
+            ];
+
+            if (data_get($data, 'end_date')) {
+                $where[] = ['end_date', '<=', data_get($data, 'end_date')];
+            }
+
+            $userBooking = UserBooking::where($where)->exists();
 
             if ($userBooking) {
                 throw new Exception(__('errors.' . ResponseError::TABLE_BOOKING_EXISTS, [
@@ -98,14 +150,18 @@ class UserBookingService extends CoreService
                 ];
             }
 
-            $userBooking = UserBooking::where([
+            $where = [
                 ['id', '!=', $model->id],
                 ['table_id', $model->table_id],
                 ['start_date', '>=', $model->start_date],
-                ['end_date', '<=', $model->end_date],
                 ['status', UserBooking::ACCEPTED],
-            ])
-                ->exists();
+            ];
+
+            if (data_get($data, 'end_date')) {
+                $where[] = ['end_date', '<=', $model->end_date];
+            }
+
+            $userBooking = UserBooking::where($where)->exists();
 
             if ($userBooking) {
                 throw new Exception(__('errors.' . ResponseError::TABLE_BOOKING_EXISTS, [
@@ -115,6 +171,29 @@ class UserBookingService extends CoreService
             }
 
             $model->update($data);
+
+
+            $tokens = $model->user?->firebase_token;
+
+            $default = data_get(Language::languagesList()->where('default', 1)->first(), 'locale');
+
+            $tStatus = Translation::where(function ($q) use ($default) {
+                $q->where('locale', $this->language)->orWhere('locale', $default);
+            })
+                ->where('key', $model->status)
+                ->first()?->value;
+
+            $this->sendNotification(
+                is_array($tokens) ? $tokens : [],
+                __('errors.' . ResponseError::BOOKING_STATUS_CHANGED, ['status' => !empty($tStatus) ? $tStatus : $model->status], $this->language),
+                $model->id,
+                [
+                    'id'     => $model->id,
+                    'status' => $model->status,
+                    'type'   => PushNotification::BOOKING_STATUS
+                ],
+                [$model->user_id]
+            );
 
             return [
                 'status' => true,

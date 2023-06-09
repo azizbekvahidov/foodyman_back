@@ -59,11 +59,10 @@ class DashboardRepository extends CoreRepository
             ->count();
 
         $reviews = Review::with('reviewable')
-            ->where('reviewable_type',Order::class)
             ->when(data_get($filter, 'shop_id'), fn($q, $shopId) =>
-                $q->whereHas('reviewable', function ($query) use($shopId) {
-                    $query->where('shop_id', '=', $shopId);
-                })
+            $q->whereHasMorph('reviewable', Order::class, function ($query) use($shopId) {
+                $query->where('shop_id', '=', $shopId);
+            })
             )
             ->select('id')
             ->count('id');
@@ -180,6 +179,7 @@ class DashboardRepository extends CoreRepository
         $canceled  = Order::STATUS_CANCELED;
         $new       = Order::STATUS_NEW;
         $accepted  = Order::STATUS_ACCEPTED;
+        $cooking   = Order::STATUS_COOKING;
         $ready     = Order::STATUS_READY;
         $onAWay    = Order::STATUS_ON_A_WAY;
         $date      = date('Y-m-d 00:00:01');
@@ -191,6 +191,7 @@ class DashboardRepository extends CoreRepository
             'cancel'                => 0,
             'new'                   => 0,
             'accepted'              => 0,
+            'cooking'               => 0,
             'ready'                 => 0,
             'on_a_way'              => 0,
             'today_count'           => 0,
@@ -201,7 +202,7 @@ class DashboardRepository extends CoreRepository
 
         Order::filter($filter)
             ->select(['id', 'total_price', 'status', 'created_at'])
-            ->chunkMap(function (Order $order) use (&$result, $date, $delivered, $canceled, $new, $accepted, $ready, $onAWay) {
+            ->chunkMap(function (Order $order) use (&$result, $date, $delivered, $canceled, $new, $accepted, $cooking, $ready, $onAWay) {
 
                 $result['count'] += 1;
                 $result['total_price'] += $order->total_price;
@@ -226,6 +227,9 @@ class DashboardRepository extends CoreRepository
                     case $accepted:
                         $result[$accepted] += 1;
                         break;
+                    case $cooking:
+                        $result[$cooking] += 1;
+                        break;
                     case $ready:
                         $result[$ready] += 1;
                         break;
@@ -237,8 +241,12 @@ class DashboardRepository extends CoreRepository
                 return true;
             });
 
-        $progress = data_get($result, 'new', 0) + data_get($result, 'accepted', 0) +
-            data_get($result, 'ready', 0) + data_get($result, 'on_a_way', 0);
+        $progress =
+            data_get($result, 'new',      0) +
+            data_get($result, 'accepted', 0) +
+            data_get($result, 'ready',    0) +
+            data_get($result, 'cooking',  0) +
+            data_get($result, 'on_a_way', 0);
 
         return [
             'progress_orders_count'     => $progress,
@@ -247,6 +255,7 @@ class DashboardRepository extends CoreRepository
             'cancel_orders_count'       => data_get($result, 'cancel'),
             'new_orders_count'          => data_get($result, 'new'),
             'accepted_orders_count'     => data_get($result, 'accepted'),
+            'cooking_orders_count'      => data_get($result, 'cooking'),
             'ready_orders_count'        => data_get($result, 'ready'),
             'on_a_way_orders_count'     => data_get($result, 'on_a_way'),
             'orders_count'              => data_get($result, 'count'),

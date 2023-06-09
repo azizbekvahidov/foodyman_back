@@ -122,7 +122,8 @@ class TestController extends Controller
 
     public function bosyaTest(Request $request)
     {
-
+//        $this->createNewTranslations();
+//        $this->ordersUpdate();
     }
 
     #region GIG LOGISTIC
@@ -171,7 +172,7 @@ class TestController extends Controller
     public function ordersUpdate() {
 
         $orders = Order::withTrashed()
-            ->where('created_at', '>=' , date('Y-m-d', strtotime('2023-04-25')))
+            ->where('created_at', '>=' , date('Y-m-d', strtotime('2023-05-12')))
             ->get();
 
         foreach ($orders as $order) {

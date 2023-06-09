@@ -128,7 +128,6 @@ class DeliveryZoneController extends RestBaseController
                 ['open', 1],
                 ['status', 'approved'],
             ])
-            ->select(['id', 'open', 'status'])
             ->find($id);
 
         if (empty($shop?->deliveryZone)) {

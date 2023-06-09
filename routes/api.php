@@ -1,17 +1,10 @@
 <?php
 
+use App\Http\Controllers\API\v1\{GalleryController, PushNotificationController, Rest, Rest\ParcelController};
+use App\Http\Controllers\API\v1\Auth\{LoginController, RegisterController, VerifyAuthController};
+use App\Http\Controllers\API\v1\Dashboard\{Admin, Cook, Deliveryman, Payment, Seller, User, Waiter,};
 use App\Http\Controllers\Web\TelegramBotController;
 use App\Models\Page;
-use App\Http\Controllers\API\v1\{GalleryController, PushNotificationController, Rest};
-use App\Http\Controllers\API\v1\Auth\{LoginController, RegisterController, VerifyAuthController};
-use App\Http\Controllers\API\v1\Dashboard\{Admin,
-    Deliveryman,
-    Payment,
-    Seller,
-    User,
-    Waiter,
-    Cook,
-};
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -83,6 +76,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
         Route::get('settings',                      [Rest\SettingController::class, 'settingsInfo']);
         Route::get('referral',                      [Rest\SettingController::class, 'referral']);
         Route::get('system/information',            [Rest\SettingController::class, 'systemInformation']);
+        Route::get('stat',                          [Rest\SettingController::class, 'stat']);
 
         /* Languages */
         Route::get('languages/default',             [Rest\LanguageController::class, 'default']);
@@ -152,6 +146,8 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
 
         Route::get('shops/{id}/reviews',            [Rest\ShopController::class, 'reviews'])
             ->where('id', '[0-9]+');
+
+        Route::post('shops/review/{id}',            [Rest\ShopController::class, 'addReviews']);
 
         Route::get('shops/{id}/reviews-group-rating', [Rest\ShopController::class, 'reviewsGroupByRating'])
             ->where('id', '[0-9]+');
@@ -237,8 +233,13 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
         Route::get('branches/paginate',                       [Rest\BranchController::class, 'index']);
         Route::get('branches/{id}',                           [Rest\BranchController::class, 'show']);
 
-        Route::apiResource('orders', Rest\OrderController::class)->except('index');
+        Route::apiResource('orders',                Rest\OrderController::class)->except('index');
+        Route::post('orders/review/{id}',                     [Rest\OrderController::class, 'addOrderReview']);
 
+        Route::post('notifications',                          [PushNotificationController::class, 'restStore']);
+
+        //Parcel Orders
+        Route::get('parcel-order/types',                      [ParcelController::class, 'index']);
     });
 
     Route::group(['prefix' => 'payments', 'middleware' => ['sanctum.check'], 'as' => 'payment.'], function () {
@@ -279,6 +280,9 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
             Route::post('orders/waiter-review/{id}',            [User\OrderController::class, 'addWaiterReview']);
             Route::post('orders/{id}/status/change',            [User\OrderController::class, 'orderStatusChange']);
             Route::apiResource('orders',              User\OrderController::class)->except('index');
+
+            Route::apiResource('parcel-orders',       User\ParcelOrderController::class);
+            Route::post('parcel-orders/{id}/status/change',      [User\ParcelOrderController::class, 'orderStatusChange']);
 
             Route::post('address/set-active/{id}',              [User\UserAddressController::class, 'setActive']);
             Route::get('address/get-active',                    [User\UserAddressController::class, 'getActive']);
@@ -333,11 +337,14 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
             Route::get('order-stripe-process', [Payment\StripeController::class, 'orderProcessTransaction']);
             Route::get('subscription-stripe-process', [Payment\StripeController::class, 'subscriptionProcessTransaction']);
 
+            Route::get('order-alipay-process', [Payment\AliPayController::class, 'orderProcessTransaction']);
+            Route::get('subscription-alipay-process', [Payment\AliPayController::class, 'subscriptionProcessTransaction']);
+
             Route::get('order-razorpay-process', [Payment\RazorPayController::class, 'orderProcessTransaction']);
             Route::get('subscription-razorpay-process', [Payment\RazorPayController::class, 'subscriptionProcessTransaction']);
 
             Route::get('order-mercado-pago-process', [Payment\MercadoPagoController::class, 'orderProcessTransaction']);
-            Route::get('subscription-mercado-pago-process', [Payment\RazorPayController::class, 'subscriptionProcessTransaction']);
+            Route::get('subscription-mercado-pago-process', [Payment\MercadoPagoController::class, 'subscriptionProcessTransaction']);
 
             Route::get('order-paystack-process', [Payment\PayStackController::class, 'orderProcessTransaction']);
             Route::get('subscription-paystack-process', [Payment\PayStackController::class, 'subscriptionProcessTransaction']);
@@ -374,25 +381,30 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
 
             /* Report Orders */
             Route::get('order/report',      [Deliveryman\OrderReportController::class, 'report']);
+
+            Route::get('parcel-orders/paginate',            [Deliveryman\ParcelOrderController::class,  'paginate']);
+            Route::post('parcel-orders/{id}/status/update', [Deliveryman\ParcelOrderController::class,  'orderStatusUpdate']);
+            Route::post('parcel-order/{id}/current',        [Deliveryman\ParcelOrderController::class,  'setCurrent']);
+            Route::post('parcel-order/{id}/attach/me',      [Deliveryman\ParcelOrderController::class,  'orderDeliverymanUpdate']);
         });
 
         // Waiter BLOCK
         Route::group(['prefix' => 'waiter', 'middleware' => ['sanctum.check', 'role:waiter'], 'as' => 'waiter.'], function () {
             Route::get('orders/paginate',            [Waiter\OrderController::class, 'paginate']);
             Route::get('orders/{id}',                [Waiter\OrderController::class, 'show']);
-            Route::post('orders/{id}/status/update', [Waiter\OrderController::class, 'orderStatusUpdate']);
-            Route::post('orders/{id}/review',        [Waiter\OrderController::class, 'addReviewByWaiter']);
-            Route::post('orders/{id}/attach/me',     [Waiter\OrderController::class, 'orderWaiterUpdate']);
+            Route::post('order/{id}/status/update',  [Waiter\OrderController::class, 'orderStatusUpdate']);
+            Route::post('order/{id}/review',         [Waiter\OrderController::class, 'addReviewByWaiter']);
+            Route::post('order/{id}/attach/me',      [Waiter\OrderController::class, 'orderWaiterUpdate']);
             Route::get('orders/count',               [Waiter\OrderController::class, 'countStatistics']);
 
-            Route::apiResource('orders',  Waiter\OrderController::class);
+            Route::apiResource('orders',  Waiter\OrderController::class)->except('destroy');
 
             /* Report Orders */
             Route::get('orders/report',              [Waiter\OrderReportController::class, 'report']);
         });
 
         // Cook BLOCK
-        Route::group(['prefix' => 'cook', 'middleware' => ['sanctum.check', 'role:waiter'], 'as' => 'cook.'], function () {
+        Route::group(['prefix' => 'cook', 'middleware' => ['sanctum.check', 'role:cook'], 'as' => 'cook.'], function () {
             Route::get('orders/paginate',            [Cook\OrderController::class, 'paginate']);
             Route::get('orders/{id}',                [Cook\OrderController::class, 'show']);
             Route::post('orders/{id}/status/update', [Cook\OrderController::class, 'orderStatusUpdate']);
@@ -493,16 +505,16 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
             Route::post('/shops/invites/{id}/status/change',    [Seller\InviteController::class, 'changeStatus']);
 
             /* Seller Coupon */
-            Route::get('discounts/paginate',              [Seller\DiscountController::class, 'paginate']);
-            Route::post('discounts/{id}/active/status',   [Seller\DiscountController::class, 'setActiveStatus']);
-            Route::delete('discounts/delete',             [Seller\DiscountController::class, 'destroy']);
-            Route::apiResource('discounts',    Seller\DiscountController::class)->except('index');
+            Route::get('discounts/paginate',            [Seller\DiscountController::class, 'paginate']);
+            Route::post('discounts/{id}/active/status', [Seller\DiscountController::class, 'setActiveStatus']);
+            Route::delete('discounts/delete',           [Seller\DiscountController::class, 'destroy']);
+            Route::apiResource('discounts',   Seller\DiscountController::class)->except('index');
 
             /* Seller Banner */
             Route::get('banners/paginate',          [Seller\BannerController::class, 'paginate']);
             Route::post('banners/active/{id}',      [Seller\BannerController::class, 'setActiveBanner']);
             Route::delete('banners/delete',         [Seller\BannerController::class, 'destroy']);
-            Route::apiResource('banners',Seller\BannerController::class);
+            Route::apiResource('banners', Seller\BannerController::class);
 
             /* Seller Order */
             Route::get('order/export',              [Seller\OrderController::class, 'fileExport']);
@@ -510,7 +522,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
             Route::get('order/products/calculate',  [Seller\OrderController::class, 'orderStocksCalculate']);
             Route::get('orders/paginate',           [Seller\OrderController::class, 'paginate']);
             Route::post('order/{id}/deliveryman',   [Seller\OrderController::class, 'orderDeliverymanUpdate']);
-            Route::post('orders/{id}/waiter',       [Seller\OrderController::class, 'orderWaiterUpdate']);
+            Route::post('order/{id}/waiter',        [Seller\OrderController::class, 'orderWaiterUpdate']);
             Route::post('order/{id}/cook',          [Seller\OrderController::class, 'orderCookUpdate']);
             Route::post('order/{id}/status',        [Seller\OrderController::class, 'orderStatusUpdate']);
             Route::apiResource('orders',  Seller\OrderController::class)->except('index');
@@ -773,6 +785,18 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
             Route::get('orders/truncate/db',             [Admin\OrderController::class, 'truncate']);
             Route::get('user-orders/{id}',               [Admin\OrderController::class, 'userOrder']);
             Route::get('user-orders/{id}/paginate',      [Admin\OrderController::class, 'userOrders']);
+
+            /* Parcel Orders */
+            Route::get('parcel-order/export',            [Admin\ParcelOrderController::class, 'fileExport']);
+            Route::post('parcel-order/import',           [Admin\ParcelOrderController::class, 'fileImport']);
+            Route::get('parcel-orders/paginate',         [Admin\ParcelOrderController::class, 'paginate']);
+            Route::post('parcel-order/{id}/deliveryman', [Admin\ParcelOrderController::class, 'orderDeliverymanUpdate']);
+            Route::post('parcel-order/{id}/status',      [Admin\ParcelOrderController::class, 'orderStatusUpdate']);
+            Route::apiResource('parcel-orders',       Admin\ParcelOrderController::class);
+            Route::delete('parcel-orders/delete',        [Admin\ParcelOrderController::class, 'destroy']);
+            Route::get('parcel-orders/drop/all',         [Admin\ParcelOrderController::class, 'dropAll']);
+            Route::get('parcel-orders/restore/all',      [Admin\ParcelOrderController::class, 'restoreAll']);
+            Route::get('parcel-orders/truncate/db',      [Admin\ParcelOrderController::class, 'truncate']);
 
             /* Users */
             Route::get('users/search',                  [Admin\UserController::class, 'usersSearch']);
@@ -1096,13 +1120,17 @@ Route::group(['prefix' => 'v1', 'middleware' => ['block.ip']], function () {
 
     });
 
+    Route::any('order-alipay-success', [Payment\AliPayController::class, 'orderResultTransaction']);
+    Route::any('subscription-alipay-success', [Payment\AliPayController::class, 'subscriptionResultTransaction']);
+
     Route::group(['prefix' => 'webhook'], function () {
-        Route::any('razorpay/payment',      [Payment\RazorPayController::class, 'paymentWebHook']);
-        Route::any('stripe/payment',        [Payment\StripeController::class, 'paymentWebHook']);
-        Route::any('flw/payment',           [Payment\FlutterWaveController::class, 'paymentWebHook']);
-        Route::any('mercado-pago/payment',  [Payment\MercadoPagoController::class, 'paymentWebHook']);
-        Route::any('paystack/payment',      [Payment\PayStackController::class, 'paymentWebHook']);
-        Route::any('telegram',              [TelegramBotController::class, 'webhook']);
+        Route::any('razorpay/payment',      [Payment\RazorPayController::class,     'paymentWebHook']);
+        Route::any('alipay/payment',        [Payment\AliPayController::class,       'paymentWebHook']);
+        Route::any('stripe/payment',        [Payment\StripeController::class,       'paymentWebHook']);
+        Route::any('flw/payment',           [Payment\FlutterWaveController::class,  'paymentWebHook']);
+        Route::any('mercado-pago/payment',  [Payment\MercadoPagoController::class,  'paymentWebHook']);
+        Route::any('paystack/payment',      [Payment\PayStackController::class,     'paymentWebHook']);
+        Route::any('telegram',              [TelegramBotController::class,          'webhook']);
     });
 });
 

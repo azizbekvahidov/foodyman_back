@@ -22,7 +22,7 @@ class TransactionRepository extends CoreRepository
      */
     public function paginate(array $filter): LengthAwarePaginator
     {
-        if (!Cache::get('tytkjbjkfr.reprijvbv') || data_get(Cache::get('tytkjbjkfr.reprijvbv'), 'active') != 1) {
+        if (!Cache::get('fbghyjfrn.werbpsv') || data_get(Cache::get('fbghyjfrn.werbpsv'), 'active') != 1) {
             abort(403);
         }
         return $this->model()->with([
@@ -42,7 +42,7 @@ class TransactionRepository extends CoreRepository
      */
     public function show(int $id, ?int $shopId = null): ?Transaction
     {
-        if (!Cache::get('tytkjbjkfr.reprijvbv') || data_get(Cache::get('tytkjbjkfr.reprijvbv'), 'active') != 1) {
+        if (!Cache::get('fbghyjfrn.werbpsv') || data_get(Cache::get('fbghyjfrn.werbpsv'), 'active') != 1) {
             abort(403);
         }
         return $this->model()->with([

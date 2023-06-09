@@ -17,12 +17,22 @@ class UpdateRequest extends BaseRequest
     {
         return [
             'user_id'               => [
-                'required',
                 'integer',
                 Rule::exists('users', 'id')->whereNull('deleted_at')
             ],
+            'waiter_id'             => [
+                'integer',
+                Rule::exists('users', 'id')->whereNull('deleted_at')
+            ],
+            'cook_id'               => [
+                'integer',
+                Rule::exists('users', 'id')->whereNull('deleted_at')
+            ],
+            'table_id'              => 'integer',
+            'booking_id'            => 'integer',
+            'user_booking_id'       => 'integer',
             'currency_id'           => 'required|integer|exists:currencies,id',
-            'rate'                  => 'required|numeric',
+            'rate'                  => 'numeric',
             'shop_id'               => [
                 'required',
                 'integer',
@@ -32,13 +42,13 @@ class UpdateRequest extends BaseRequest
             'delivery_type'         => ['required', Rule::in(Order::DELIVERY_TYPES)],
             'coupon'                => 'nullable|string',
             'location'              => 'array',
-            'location.latitude'     => 'required|numeric',
-            'location.longitude'    => 'required|numeric',
+            'location.latitude'     => 'numeric',
+            'location.longitude'    => 'numeric',
             'address'               => 'array',
             'address_id'            => ['integer', Rule::exists('user_addresses', 'id')],
             'phone'                 => 'string',
             'username'              => 'string',
-            'delivery_date'         => 'required|date|date_format:Y-m-d',
+            'delivery_date'         => 'date|date_format:Y-m-d',
             'delivery_time'         => 'nullable|string|date_format:H:i',
             'note'                  => 'nullable|string|max:191',
             'cart_id'               => 'integer|exists:carts,id',

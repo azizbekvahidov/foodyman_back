@@ -13,7 +13,6 @@ use App\Http\Resources\NotificationResource;
 use App\Http\Resources\UserResource;
 use App\Models\Banner;
 use App\Models\Like;
-use App\Models\PushNotification;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Repositories\UserRepository\UserRepository;
@@ -219,7 +218,14 @@ class ProfileController extends UserBaseController
     {
         $notification = DB::table('push_notifications')
             ->select([
-                DB::raw('count(id) as count')
+                DB::raw('count(id) as count'),
+                DB::raw("sum(if(type = 'new_order', 1, 0)) as total_new_order_count"),
+                DB::raw("sum(if(type = 'new_user_by_referral', 1, 0)) as total_new_user_by_referral_count"),
+                DB::raw("sum(if(type = 'status_changed', 1, 0)) as total_status_changed_count"),
+                DB::raw("sum(if(type = 'new_in_table', 1, 0)) as total_new_in_table_count"),
+                DB::raw("sum(if(type = 'booking_status', 1, 0)) as total_booking_status_count"),
+                DB::raw("sum(if(type = 'new_booking', 1, 0)) as total_new_booking_count"),
+                DB::raw("sum(if(type = 'news_publish', 1, 0)) as total_news_publish_count"),
             ])
             ->whereNull('read_at')
             ->where('user_id', auth('sanctum')->id())
@@ -227,15 +233,23 @@ class ProfileController extends UserBaseController
 
         $transaction = DB::table('transactions')
             ->select([
-                DB::raw('count(id) as count')
+                DB::raw('count(id) as count'),
+
             ])
             ->where('status', Transaction::STATUS_PROGRESS)
             ->where('user_id', auth('sanctum')->id())
             ->first();
 
         return [
-            'notification' => $notification?->count,
-            'transaction'  => $transaction?->count
+            'notification'          => (int)$notification?->count,
+            'new_order'             => (int)$notification?->total_new_order_count,
+            'new_user_by_referral'  => (int)$notification?->total_new_user_by_referral_count,
+            'status_changed'        => (int)$notification?->total_status_changed_count,
+            'new_in_table'          => (int)$notification?->total_new_in_table_count,
+            'booking_status'        => (int)$notification?->total_booking_status_count,
+            'new_booking'           => (int)$notification?->total_new_booking_count,
+            'news_publish'          => (int)$notification?->total_news_publish_count,
+            'transaction'           => (int)$transaction?->count
         ];
     }
 

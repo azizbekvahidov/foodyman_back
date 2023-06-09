@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Booking\Table;
 use App\Traits\Loadable;
 use App\Traits\Payable;
 use App\Traits\Reviewable;
 use Database\Factories\OrderFactory;
 use DB;
 use Eloquent;
+use Facade\Ignition\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -74,16 +76,14 @@ use Illuminate\Support\Carbon;
  * @property-read PointHistory|null $pointHistory
  * @property-read PointHistory|null $pointHistories
  * @property-read Review|null $review
- * @property-read Transaction|null $transaction
- * @property-read Collection|Transaction[] $transactions
- * @property-read int $transactions_count
  * @property-read Collection|PaymentProcess[] $paymentProcess
  * @property-read int $payment_process_count
- * @property-read User $user
+ * @property-read User|null $user
  * @property-read Shop $shop
  * @property-read User $deliveryMan
  * @property-read User $waiter
  * @property-read User $cook
+ * @property-read Table $table
  * @property-read Collection|Gallery[] $galleries
  * @property-read int|null $galleries_count
  * @property-read Collection|ModelLog[] $logs
@@ -179,11 +179,6 @@ class Order extends Model
         return $this->hasOne(OrderCoupon::class, 'order_id')->withTrashed();
     }
 
-    public function transaction(): MorphOne
-    {
-        return $this->morphOne(Transaction::class, 'payable')->withTrashed();
-    }
-
     public function deliveryMan(): BelongsTo
     {
         return $this->belongsTo(User::class, 'deliveryman')->withTrashed();
@@ -197,6 +192,11 @@ class Order extends Model
     public function waiter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'waiter_id')->withTrashed();
+    }
+
+    public function table(): BelongsTo
+    {
+        return $this->belongsTo(Table::class)->withTrashed();
     }
 
     public function user(): BelongsTo
@@ -323,11 +323,19 @@ class Order extends Model
             ->when(data_get($filter, 'isset-deliveryman'), function ($q) {
                 $q->whereHas('deliveryMan');
             })
+            ->when(data_get($filter, 'isset-waiter'), function ($q) {
+                $q->whereNotNull('waiter_id');
+            })
+            ->when(data_get($filter, 'isset-cook'), function ($q) {
+                $q->whereNotNull('cook_id');
+            })
             ->when(data_get($filter, 'search'), function ($q, $search) {
                 $q->where(function ($b) use ($search) {
 
                     $b->where('id', 'LIKE', "%$search%")
                         ->orWhere('user_id', $search)
+                        ->orWhere('phone', "%$search%")
+                        ->orWhere('username', "%$search%")
                         ->orWhereHas('user', fn($q) => $q
                             ->where('firstname',  'LIKE', "%$search%")
                             ->orWhere('lastname', 'LIKE', "%$search%")
@@ -343,9 +351,10 @@ class Order extends Model
             ->when(data_get($filter, 'shop_ids'), function ($q, $shopIds) {
                 $q->whereIn('shop_id', is_array($shopIds) ? $shopIds : []);
             })
-            ->when(data_get($filter, 'user_id'), fn($q, $userId) => $q->where('user_id', $userId))
-            ->when(data_get($filter, 'waiter_id'), fn($q, $waiterId) => $q->where('waiter_id', $waiterId))
-            ->when(data_get($filter, 'cook_id'), fn($q, $cookId) => $q->where('cook_id', $cookId))
+            ->when(data_get($filter, 'user_id'),    fn($q, $userId)     => $q->where('user_id',   (int)$userId))
+            ->when(data_get($filter, 'table_id'),   fn($q, $tableId)    => $q->where('table_id',  (int)$tableId))
+            ->when(data_get($filter, 'waiter_id'),  fn($q, $waiterId)   => $q->where('waiter_id', (int)$waiterId))
+            ->when(data_get($filter, 'cook_id'),    fn($q, $cookId)     => $q->where('cook_id',   (int)$cookId))
             ->when(data_get($filter, 'delivery_type'), fn($q, $deliveryType) => $q->where('delivery_type', $deliveryType))
             ->when(data_get($filter, 'date_from'), function (Builder $query, $dateFrom) use ($filter) {
 
@@ -372,26 +381,32 @@ class Order extends Model
                     ['delivery_date', '<=', $dateTo],
                 ]);
             })
-            ->when(data_get($filter, 'status'),
-                fn($q) => $q->where('status', data_get($filter, 'status'))
-            )
+            ->when(data_get($filter, 'status'), fn($q, $status) => $q->where('status', $status))
             ->when(data_get($filter, 'deliveryman'), fn(Builder $q, $deliveryman) =>
-            $q->whereHas('deliveryMan', function ($q) use($deliveryman) {
-                $q->where('id', $deliveryman);
-            })
+                $q->whereHas('deliveryMan', function ($q) use($deliveryman) {
+                    $q->where('id', $deliveryman);
+                })
             )
             ->when(data_get($filter, 'empty-deliveryman'), fn(Builder $q) => $q->where(function ($b) {
                 $b->whereNull('deliveryman')
                     ->orWhere('deliveryman', '=', null)
                     ->orWhere('deliveryman', '=', 0);
-            })
+                })
+            )
+            ->when(data_get($filter, 'empty-waiter'), fn(Builder $q) => $q->where(function ($b) {
+                    $b->whereNull('waiter_id');
+                })
+            )
+            ->when(data_get($filter, 'empty-cook'), fn(Builder $q) => $q->where(function ($b) {
+                    $b->whereNull('cook_id');
+                })
             )
             ->when(isset($filter['current']), fn($q) => $q->where('current', $filter['current']))
             ->when(isset($filter['deleted_at']), fn($q) => $q->onlyTrashed())
             ->when(count($orderByStatuses) > 0, fn($q) => $q->whereIn('status', $orderByStatuses))
             ->when(data_get($filter, 'order_statuses'), function ($q) {
                 $q->orderByRaw(
-                    DB::raw("FIELD(status, 'new', 'accepted', 'ready', 'on_a_way',  'delivered', 'canceled') ASC")
+                    DB::raw("FIELD(status, 'new', 'accepted', 'cooking', 'ready', 'on_a_way',  'delivered', 'canceled') ASC")
                 );
             }
             );

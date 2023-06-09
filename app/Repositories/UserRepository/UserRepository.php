@@ -33,7 +33,8 @@ class UserRepository extends CoreRepository
                 'emailSubscription',
                 'notifications',
                 'assignReviews',
-                'addresses'
+                'addresses',
+                'invite'
             ])
             ->withCount([
                 'orders' => fn($q) => $q->where('status', Order::STATUS_DELIVERED)

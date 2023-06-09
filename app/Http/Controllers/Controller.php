@@ -33,7 +33,7 @@ class Controller extends BaseController
     {
         return request(
             'currency_id',
-            data_get(Currency::where('default', 1)->first(['id', 'default']), 'id')
+            data_get(Currency::currenciesList()->where('default', 1)->first(), 'id')
         );
     }
 
@@ -44,7 +44,7 @@ class Controller extends BaseController
     {
         return request(
             'lang',
-            data_get(Language::where('default', 1)->first(['locale', 'default']), 'locale')
+            data_get(Language::languagesList()->where('default', 1)->first(), 'locale')
         );
     }
 }

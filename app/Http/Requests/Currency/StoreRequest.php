@@ -16,6 +16,7 @@ class StoreRequest extends BaseRequest
         return [
             'title'     => 'required|string',
             'symbol'    => 'required|string',
+            'position'  => 'string|in:before,after',
             'rate'      => 'numeric',
             'active'    => 'boolean',
         ];

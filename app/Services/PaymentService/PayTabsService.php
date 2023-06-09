@@ -36,7 +36,7 @@ class PayTabsService extends BaseService
         $payload        = $paymentPayload?->payload;
 
         $order          = Order::find(data_get($data, 'order_id'));
-        $totalPrice     = ceil($order->rate_total_price) * 100;
+        $totalPrice     = ceil($order->rate_total_price * 2 * 100) / 2;
 
         $order->update([
             'total_price' => ($totalPrice / $order->rate) / 100

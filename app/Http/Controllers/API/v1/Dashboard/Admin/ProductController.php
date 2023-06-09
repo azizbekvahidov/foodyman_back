@@ -14,6 +14,7 @@ use App\Http\Resources\ProductResource;
 use App\Http\Resources\StockResource;
 use App\Http\Resources\UserActivityResource;
 use App\Imports\ProductImport;
+use App\Jobs\ImportReadyNotify;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Models\Stock;
@@ -27,6 +28,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use Throwable;
 
@@ -416,7 +419,7 @@ class ProductController extends AdminBaseController
         );
     }
 
-    public function fileExport(Request $request): JsonResponse
+    public function fileExport(FilterParamsRequest $request): JsonResponse
     {
         $fileName = 'export/products.xls';
 
@@ -443,18 +446,39 @@ class ProductController extends AdminBaseController
         return UserActivityResource::collection($history);
     }
 
-    public function fileImport(Request $request): JsonResponse
+    public function fileImport(FilterParamsRequest $request): JsonResponse
     {
         $shopId = $request->input('shop_id');
 
         try {
-            Excel::import(new ProductImport($shopId, $this->language), $request->file('file'));
+            $content = 'import';
+
+            if (!Storage::exists("public/$content")) {
+                Storage::makeDirectory("public/$content");
+            }
+
+            $filename = $request->file('file');
+//            $filename = Storage::put("public/$content", $filename);
+//
+//            $filename = str_replace('public', 'storage', $filename);
+
+            $import = new ProductImport($shopId, $this->language);
+
+//            $import->chain([
+//                new ImportReadyNotify($shopId, $filename)
+//            ]);
+
+            Excel::import($import, $filename);
+
+            $memoryUsage = memory_get_usage() / 1024 / 1024;
+
+            Log::error("start mb $memoryUsage");
 
             return $this->successResponse('Successfully imported');
         } catch (Exception $e) {
             return $this->onErrorResponse([
-                'code'  => ResponseError::ERROR_508,
-                'data'  => __('errors.' . ResponseError::ERROR_508, locale: $this->language) . ' | ' . $e->getMessage()
+                'code'      => ResponseError::ERROR_508,
+                'message'   => $e->getMessage()
             ]);
         }
     }

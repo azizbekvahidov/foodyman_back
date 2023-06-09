@@ -6,6 +6,7 @@ use App\Exports\OrderExport;
 use App\Helpers\ResponseError;
 use App\Http\Requests\FilterParamsRequest;
 use App\Http\Requests\Order\CookUpdateRequest;
+use App\Http\Requests\Order\StatusUpdateRequest;
 use App\Http\Requests\Order\WaiterUpdateRequest;
 use App\Http\Requests\Order\DeliveryManUpdateRequest;
 use App\Http\Requests\Order\StocksCalculateRequest;
@@ -14,6 +15,7 @@ use App\Http\Requests\Order\UpdateRequest;
 use App\Http\Resources\OrderResource;
 use App\Imports\OrderImport;
 use App\Models\Order;
+use App\Models\PushNotification;
 use App\Models\Settings;
 use App\Models\User;
 use App\Repositories\DashboardRepository\DashboardRepository;
@@ -97,7 +99,7 @@ class OrderController extends SellerBaseController
             data_get($tokens, 'tokens'),
             "New order was created",
             data_get($result, 'data.id', ''),
-            data_get($result, 'data')?->setAttribute('type', 'new_order')?->only(['id', 'status']),
+            data_get($result, 'data')?->setAttribute('type', PushNotification::NEW_ORDER)?->only(['id', 'status', 'type']),
             data_get($tokens, 'ids', [])
         );
 
@@ -177,10 +179,10 @@ class OrderController extends SellerBaseController
      * Update Order Status details by OrderDetail ID.
      *
      * @param int $orderId
-     * @param FilterParamsRequest $request
+     * @param StatusUpdateRequest $request
      * @return JsonResponse
      */
-    public function orderStatusUpdate(int $orderId, FilterParamsRequest $request): JsonResponse
+    public function orderStatusUpdate(int $orderId, StatusUpdateRequest $request): JsonResponse
     {
         /** @var Order $order */
         $order = Order::with([

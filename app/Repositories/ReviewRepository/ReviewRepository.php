@@ -150,24 +150,26 @@ class ReviewRepository extends CoreRepository
             })
             ->when(data_get($filter, 'search'), function ($query, $search) {
                 $query
-                    ->where('comment', 'LIKE', "%$search")
-                    ->orWhereHas('user', fn($q) => $q->where(function ($b) use ($search) {
+                    ->where(function ($query) use ($search) {
+                        $query->where('comment', 'LIKE', "%$search")
+                            ->orWhereHas('user', fn($q) => $q->where(function ($b) use ($search) {
 
-                        $firstNameLastName = explode(' ', $search);
+                                $firstNameLastName = explode(' ', $search);
 
-                        if (data_get($firstNameLastName, 1)) {
-                            return $b
-                                ->where('firstname', 'LIKE', '%' . $firstNameLastName[0] . '%')
-                                ->orWhere('lastname', 'LIKE', '%' . $firstNameLastName[1] . '%');
-                        }
+                                if (data_get($firstNameLastName, 1)) {
+                                    return $b
+                                        ->where('firstname', 'LIKE', '%' . $firstNameLastName[0] . '%')
+                                        ->orWhere('lastname', 'LIKE', '%' . $firstNameLastName[1] . '%');
+                                }
 
-                        return $b
-                            ->where('id', 'LIKE', "%$search%")
-                            ->orWhere('firstname', 'LIKE', "%$search%")
-                            ->orWhere('lastname', 'LIKE', "%$search%")
-                            ->orWhere('email', 'LIKE', "%$search%")
-                            ->orWhere('phone', 'LIKE', "%$search%");
-                    }));
+                                return $b
+                                    ->where('id', 'LIKE', "%$search%")
+                                    ->orWhere('firstname', 'LIKE', "%$search%")
+                                    ->orWhere('lastname', 'LIKE', "%$search%")
+                                    ->orWhere('email', 'LIKE', "%$search%")
+                                    ->orWhere('phone', 'LIKE', "%$search%");
+                            }));
+                    });
             })
             ->orderBy(data_get($filter, 'column', 'id'), data_get($filter, 'sort', 'desc'))
             ->paginate(data_get($filter, 'perPage', 10));

@@ -5,6 +5,8 @@ namespace App\Services\OrderService;
 use App\Helpers\NotificationHelper;
 use App\Helpers\ResponseError;
 use App\Helpers\Utility;
+use App\Models\Language;
+use App\Models\PushNotification;
 use App\Models\Receipt;
 use App\Models\Coupon;
 use App\Models\Currency;
@@ -38,6 +40,7 @@ class OrderService extends CoreService implements OrderServiceInterface
         if (data_get($data, 'table_id')) {
 
             $order = Order::select([
+                'id',
                 'status',
                 'table_id'
             ])
@@ -78,19 +81,37 @@ class OrderService extends CoreService implements OrderServiceInterface
                 return $order;
             });
 
+            $locale = data_get(Language::languagesList()->where('default', 1)->first(), 'locale');
+
             return [
                 'status'    => true,
                 'message'   => ResponseError::NO_ERROR,
                 'data'      => $order->fresh([
-                    'shop',
+                    'user' => fn($u) => $u->withCount(['orders' => fn($u) => $u->where('status', Order::STATUS_DELIVERED)])
+                        ->withSum(['orders' => fn($u) => $u->where('status', Order::STATUS_DELIVERED)], 'total_price'),
+                    'review',
+                    'pointHistories',
+                    'currency' => fn($c) => $c->select('id', 'title', 'symbol'),
+                    'deliveryMan' => fn($d) => $d->withAvg('assignReviews', 'rating'),
+                    'deliveryMan.deliveryManSetting',
                     'coupon',
-                    'currency',
-                    'orderDetails' => fn($q) => $q->whereNull('parent_id'),
+                    'shop:id,location,tax,price,price_per_km,background_img,logo_img,uuid,phone',
+                    'shop.translation' => fn($st) => $st->where('locale', $this->language)->orWhere('locale', $locale),
+                    'orderDetails' => fn($od) => $od->whereNull('parent_id'),
                     'orderDetails.stock.countable.discounts' => fn($q) => $q->where('start', '<=', today())
                         ->where('end', '>=', today())
                         ->where('active', 1),
-                    'orderDetails.stock.countable:id,status,shop_id,min_qty,max_qty,tax,img',
-                    'orderDetails.children.stock.countable:id,status,shop_id,min_qty,max_qty,tax',
+                    'orderDetails.stock.countable.translation' => fn($ct) => $ct->where('locale', $this->language)->orWhere('locale', $locale),
+                    'orderDetails.children.stock.countable.translation' => fn($ct) => $ct->where('locale', $this->language)->orWhere('locale', $locale),
+                    'orderDetails.stock.stockExtras.group.translation' => function ($cgt) use($locale) {
+                        $cgt->select('id', 'extra_group_id', 'locale', 'title')
+                            ->where('locale', $this->language)
+                            ->orWhere('locale', $locale);
+                    },
+                    'orderRefunds',
+                    'transaction.paymentSystem',
+                    'galleries',
+                    'myAddress',
                 ])
             ];
 
@@ -143,18 +164,37 @@ class OrderService extends CoreService implements OrderServiceInterface
                 return $order;
             });
 
+            $locale = data_get(Language::languagesList()->where('default', 1)->first(), 'locale');
+
             return [
                 'status' => true,
                 'message' => ResponseError::NO_ERROR,
                 'data' => $order->fresh([
-                    'shop',
+                    'user' => fn($u) => $u->withCount(['orders' => fn($u) => $u->where('status', Order::STATUS_DELIVERED)])
+                        ->withSum(['orders' => fn($u) => $u->where('status', Order::STATUS_DELIVERED)], 'total_price'),
+                    'review',
+                    'pointHistories',
+                    'currency' => fn($c) => $c->select('id', 'title', 'symbol'),
+                    'deliveryMan' => fn($d) => $d->withAvg('assignReviews', 'rating'),
+                    'deliveryMan.deliveryManSetting',
                     'coupon',
-                    'orderDetails' => fn($q) => $q->whereNull('parent_id'),
+                    'shop:id,location,tax,price,price_per_km,background_img,logo_img,uuid,phone',
+                    'shop.translation' => fn($st) => $st->where('locale', $this->language)->orWhere('locale', $locale),
+                    'orderDetails' => fn($od) => $od->whereNull('parent_id'),
                     'orderDetails.stock.countable.discounts' => fn($q) => $q->where('start', '<=', today())
                         ->where('end', '>=', today())
                         ->where('active', 1),
-                    'orderDetails.stock.countable:id,status,shop_id,min_qty,max_qty,tax,img',
-                    'orderDetails.children.stock.countable:id,status,shop_id,min_qty,max_qty,tax',
+                    'orderDetails.stock.countable.translation' => fn($ct) => $ct->where('locale', $this->language)->orWhere('locale', $locale),
+                    'orderDetails.children.stock.countable.translation' => fn($ct) => $ct->where('locale', $this->language)->orWhere('locale', $locale),
+                    'orderDetails.stock.stockExtras.group.translation' => function ($cgt) use($locale) {
+                        $cgt->select('id', 'extra_group_id', 'locale', 'title')
+                            ->where('locale', $this->language)
+                            ->orWhere('locale', $locale);
+                    },
+                    'orderRefunds',
+                    'transaction.paymentSystem',
+                    'galleries',
+                    'myAddress',
                 ])
             ];
 
@@ -316,7 +356,7 @@ class OrderService extends CoreService implements OrderServiceInterface
                 is_array($user->firebase_token) ? $user->firebase_token : [$user->firebase_token],
                 __('errors.' . ResponseError::NEW_ORDER, ['id' => $order->id], $this->language),
                 $order->id,
-                (new NotificationHelper)->deliveryManOrder($order, $this->language, 'new_order'),
+                (new NotificationHelper)->deliveryManOrder($order, $this->language, PushNotification::NEW_ORDER),
                 [$user->id]
             );
 
@@ -634,29 +674,32 @@ class OrderService extends CoreService implements OrderServiceInterface
         }
 
         return [
-            'user_id'               => data_get($data, 'user_id', auth('sanctum')->id()),
-            'waiter_id'             => data_get($data, 'waiter_id'),
-            'cook_id'               => data_get($data, 'cook_id'),
-            'total_price'           => 0,
-            'currency_id'           => $currencyId,
-            'rate'                  => data_get($data, 'rate'),
-            'note'                  => data_get($data, 'note'),
-            'shop_id'               => data_get($data, 'shop_id'),
-            'phone'                 => data_get($data, 'phone'),
-            'username'              => data_get($data, 'username'),
-            'tax'                   => 0,
-            'commission_fee'        => 0,
-            'status'                => data_get($data, 'status', 'new'),
-            'delivery_fee'          => max($deliveryFeeRate, 0),
-            'waiter_fee'            => max($waiterFeeRate, 0),
-            'delivery_type'         => data_get($data, 'delivery_type'),
-            'location'              => data_get($data, 'location'),
-            'address'               => data_get($data, 'address'),
-            'address_id'            => data_get($data, 'address_id'),
-            'deliveryman'           => data_get($data, 'deliveryman'),
-            'delivery_date'         => data_get($data, 'delivery_date'),
-            'delivery_time'         => data_get($data, 'delivery_time'),
-            'total_discount'        => 0,
+            'user_id'           => data_get($data, 'user_id', auth('sanctum')->id()),
+            'waiter_id'         => data_get($data, 'waiter_id'),
+            'cook_id'           => data_get($data, 'cook_id'),
+            'table_id'          => data_get($data, 'table_id'),
+            'booking_id'        => data_get($data, 'booking_id'),
+            'user_booking_id'   => data_get($data, 'user_booking_id'),
+            'total_price'       => 0,
+            'currency_id'       => $currencyId,
+            'rate'              => data_get($data, 'rate'),
+            'note'              => data_get($data, 'note'),
+            'shop_id'           => data_get($data, 'shop_id'),
+            'phone'             => data_get($data, 'phone'),
+            'username'          => data_get($data, 'username'),
+            'tax'               => 0,
+            'commission_fee'    => 0,
+            'status'            => data_get($data, 'status', 'new'),
+            'delivery_fee'      => max($deliveryFeeRate, 0),
+            'waiter_fee'        => max($waiterFeeRate, 0),
+            'delivery_type'     => data_get($data, 'delivery_type'),
+            'location'          => data_get($data, 'location'),
+            'address'           => data_get($data, 'address'),
+            'address_id'        => data_get($data, 'address_id'),
+            'deliveryman'       => data_get($data, 'deliveryman'),
+            'delivery_date'     => data_get($data, 'delivery_date'),
+            'delivery_time'     => data_get($data, 'delivery_time'),
+            'total_discount'    => 0,
         ];
     }
 

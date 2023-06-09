@@ -67,6 +67,12 @@ class ProductExport extends BaseExport implements FromCollection, WithHeadings
             'Quantity',
             'Img Urls',
             'Created At',
+            'Vegetarian',
+            'Kcal',
+            'Carbs',
+            'Protein',
+            'Fats',
+            'Addon',
         ];
     }
 
@@ -75,30 +81,36 @@ class ProductExport extends BaseExport implements FromCollection, WithHeadings
         $stock = $product->stocks->first();
 
         return [
-           'id'             => $product->id,//0
-           'uuid'           => $product->uuid,//1
-           'title'          => data_get($product->translation, 'title', ''),//2
-           'description'    => data_get($product->translation, 'description', ''),//3
-           'shop_id'        => $product->shop_id,//4
-           'shop_title'     => data_get(optional($product->shop)->translation, 'title', ''),//5
-           'category_id'    => $product->category_id ?? 0,//6
-           'category_title' => data_get(optional($product->category)->translation, 'title', ''),//7
-           'brand_id'       => $product->brand_id ?? 0,//8
-           'brand_title'    => optional($product->brand)->title ?? 0,//9
-           'unit_id'        => $product->unit_id ?? 0,//10
-           'unit_title'     => data_get(optional($product->unit)->translation, 'title', ''),//11
-           'keywords'       => $product->keywords ?? '',//12
-           'tax'            => $product->tax ?? 0,//13
-           'active'         => $product->active ? 'active' : 'inactive',//14
-           'bar_code'       => $product->bar_code ?? '',//15
-           'qr_code'        => $product->qr_code ?? '',//16
-           'status'         => $product->status ?? Product::PENDING,//17
-           'min_qty'        => $product->min_qty ?? 0,//18
-           'max_qty'        => $product->max_qty ?? 0,//19
-           'price'          => data_get($stock, 'price', 0),//20
-           'quantity'       => data_get($stock, 'quantity', 0),//21
-           'img_urls'       => $this->imageUrl($product->galleries) ?? '',//22
-           'created_at'     => $product->created_at ?? date('Y-m-d H:i:s'),//23
+            'id'             => $product->id,
+            'uuid'           => $product->uuid,
+            'title'          => data_get($product->translation, 'title', ''),
+            'description'    => data_get($product->translation, 'description', ''),
+            'shop_id'        => $product->shop_id,
+            'shop_title'     => data_get(optional($product->shop)->translation, 'title', ''),
+            'category_id'    => $product->category_id ?? 0,
+            'category_title' => data_get(optional($product->category)->translation, 'title', ''),
+            'brand_id'       => $product->brand_id ?? 0,
+            'brand_title'    => optional($product->brand)->title ?? 0,
+            'unit_id'        => $product->unit_id ?? 0,
+            'unit_title'     => data_get(optional($product->unit)->translation, 'title', ''),
+            'keywords'       => $product->keywords ?? '',
+            'tax'            => $product->tax ?? 0,
+            'active'         => $product->active ? 'active' : 'inactive',
+            'bar_code'       => $product->bar_code ?? '',
+            'qr_code'        => $product->qr_code ?? '',
+            'status'         => $product->status ?? Product::PENDING,
+            'min_qty'        => $product->min_qty ?? 0,
+            'max_qty'        => $product->max_qty ?? 0,
+            'price'          => data_get($stock, 'price', 0),
+            'quantity'       => data_get($stock, 'quantity', 0),
+            'img_urls'       => $this->imageUrl($product->galleries) ?? '',
+            'created_at'     => $product->created_at ?? date('Y-m-d H:i:s'),
+            'vegetarian'     => $product->vegetarian,
+            'kcal'           => $product->kcal,
+            'carbs'          => $product->carbs,
+            'protein'        => $product->protein,
+            'fats'           => $product->fats,
+            'addon'          => $product->addon,
         ];
     }
 }

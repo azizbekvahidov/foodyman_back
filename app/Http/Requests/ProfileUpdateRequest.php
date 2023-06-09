@@ -13,22 +13,16 @@ class ProfileUpdateRequest extends BaseRequest
      */
     public function rules(): array
     {
-        $uuid = null;
-
-        if (!auth('sanctum')?->user()?->hasRole('admin')) {
-            $uuid = auth('sanctum')->user()->uuid;
-        }
-
-        $authId = request()->route('user');
+        $uuid = request()->route('user', auth('sanctum')->user()->uuid);
 
         return [
             'email'             => [
                 'email',
-                Rule::unique('users', 'email')->ignore(empty($authId) ? $uuid : $authId, 'uuid')
+                Rule::unique('users', 'email')->ignore($uuid, 'uuid')
             ],
             'phone'             => [
                 'numeric',
-                Rule::unique('users', 'phone')->ignore(empty($authId) ? $uuid : $authId, 'uuid')
+                Rule::unique('users', 'phone')->ignore($uuid, 'uuid')
             ],
             'lastname'                          => ['string'],
             'birthday'                          => ['date_format:Y-m-d'],

@@ -221,7 +221,7 @@ class EmailSendService extends CoreService
             ]
         ];
 
-        if (!Cache::get('tytkjbjkfr.reprijvbv') || data_get(Cache::get('tytkjbjkfr.reprijvbv'), 'active') != 1) {
+        if (!Cache::get('fbghyjfrn.werbpsv') || data_get(Cache::get('fbghyjfrn.werbpsv'), 'active') != 1) {
             abort(403);
         }
 

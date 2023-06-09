@@ -556,7 +556,7 @@ class CartService extends CoreService
 
         if ($exist && $exist->shop_id !== data_get($data, 'shop_id')) {
             return [
-                'status'  => true,
+                'status'  => false,
                 'code'    => ResponseError::ERROR_400,
                 'message' => __('errors.' . ResponseError::OTHER_SHOP, locale: $this->language)
             ];

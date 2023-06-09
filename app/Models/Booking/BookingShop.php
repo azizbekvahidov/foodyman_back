@@ -65,7 +65,6 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
- * @property string|null $mark
  * @property int|null $type
  * @property array|null $delivery_time
  * @property-read Collection|Gallery[] $galleries
@@ -119,7 +118,6 @@ use Illuminate\Support\Carbon;
  * @method static Builder|self whereId($value)
  * @method static Builder|self whereLocation($value)
  * @method static Builder|self whereLogoImg($value)
- * @method static Builder|self whereMark($value)
  * @method static Builder|self whereMinAmount($value)
  * @method static Builder|self whereOpen($value)
  * @method static Builder|self whereOpenTime($value)
@@ -343,7 +341,7 @@ class BookingShop extends Model
                 ->reject(fn($data) => empty($data))
                 ->toArray();
 
-            asort($orders);
+            arsort($orders);
         }
 
         $query
@@ -376,10 +374,12 @@ class BookingShop extends Model
                 });
             })
             ->when(data_get($filter, 'deals'), function (Builder $query) {
-                $query->whereHas('bonus', function ($q) {
-                    $q->where('expired_at', '>=', now());
-                })->orWhereHas('discounts', function ($q) {
-                    $q->where('end', '>=', now())->where('active', 1);
+                $query->where(function ($query) {
+                    $query->whereHas('bonus', function ($q) {
+                        $q->where('expired_at', '>=', now());
+                    })->orWhereHas('discounts', function ($q) {
+                        $q->where('end', '>=', now())->where('active', 1);
+                    });
                 });
             })
             ->when(data_get($filter, 'address'), function ($query) use ($filter, $orders) {

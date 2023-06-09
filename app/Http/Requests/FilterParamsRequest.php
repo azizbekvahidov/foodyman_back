@@ -23,6 +23,8 @@ class FilterParamsRequest extends BaseRequest
                 Rule::exists('shops', 'id')->whereNull('deleted_at')
             ],
             'user_id'       => 'exists:users,id',
+            'currency_id'   => 'exists:currencies,id',
+            'lang'          => 'exists:languages,locale',
             'category_id'   => 'exists:categories,id',
             'brand_id'      => 'exists:brands,id',
             'price'         => 'numeric',

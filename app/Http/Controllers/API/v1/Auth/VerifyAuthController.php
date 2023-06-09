@@ -10,6 +10,7 @@ use App\Http\Requests\Auth\PhoneVerifyRequest;
 use App\Http\Requests\Auth\ReSendVerifyRequest;
 use App\Http\Resources\UserResource;
 use App\Models\Notification;
+use App\Models\PushNotification;
 use App\Models\User;
 use App\Services\AuthService\AuthByMobilePhone;
 use App\Services\UserServices\UserWalletService;
@@ -100,10 +101,11 @@ class VerifyAuthController extends Controller
         if (!empty($referral) && !empty($referral->firebase_token)) {
             $this->sendNotification(
                 is_array($referral->firebase_token) ? $referral->firebase_token : [$referral->firebase_token],
-                "By your referral registered new user. $user->name_or_email",
-                "Congratulations!",
+                "Congratulations! By your referral registered new user. $user->name_or_email",
+                $referral->id,
                 [
-                    'type' => 'new_user_by_referral'
+                    'id'   => $referral->id,
+                    'type' => PushNotification::NEW_USER_BY_REFERRAL
                 ],
                 [$referral->id]
             );

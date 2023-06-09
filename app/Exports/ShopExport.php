@@ -39,7 +39,6 @@ class ShopExport extends BaseExport implements FromCollection, WithHeadings
             'Status',
             'Status Note',
             'Created At',
-            'Mark',
             'Take',
             'Delivery Time',
             'Type',
@@ -74,7 +73,6 @@ class ShopExport extends BaseExport implements FromCollection, WithHeadings
             'status'            => $shop->status, //13
             'status_note'       => $shop->status_note, //14
             'created_at'        => $shop->created_at ?? date('Y-m-d H:i:s'),//23
-            'mark'              => $shop->mark, //18
             'take'              => $shop->take, //19
             'delivery_time'     => "from: $from, to: $to, type: $type", //20
             'type'              => data_get(Shop::TYPES, $shop->type, 'shop'), //21

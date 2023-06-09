@@ -29,7 +29,6 @@ return new class extends Migration
             $table->double('min_amount', 12)->default(0.1);
             $table->enum('status', ['new', 'edited', 'approved', 'rejected', 'inactive'])->default('new');
             $table->text('status_note')->nullable();
-            $table->string('mark')->nullable();
             $table->json('delivery_time');
             $table->tinyInteger('type');
             $table->double('price')->default(0);

@@ -191,7 +191,6 @@ return [
         'note' => 'note',
         'sort' => 'sort',
         'data' => 'data',
-        'mark' => 'mark',
         'date' => 'date',
         'text' => 'text',
         'area' => 'area',
